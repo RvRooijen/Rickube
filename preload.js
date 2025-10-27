@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('api', {
     getContexts: () => ipcRenderer.invoke('kubectl:getContexts'),
     useContext: (contextName) => ipcRenderer.invoke('kubectl:useContext', contextName),
     check: () => ipcRenderer.invoke('kubectl:check'),
+    listDirectory: (podName, namespace, path) => ipcRenderer.invoke('kubectl:listDirectory', { podName, namespace, path }),
+    readFile: (podName, namespace, filePath) => ipcRenderer.invoke('kubectl:readFile', { podName, namespace, filePath }),
   },
 
   // Terminal operations

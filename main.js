@@ -210,3 +210,41 @@ ipcMain.handle('kubectl:check', async () => {
     return { success: false, error: 'kubectl not found or not accessible in WSL' };
   }
 });
+
+// List directory in pod
+ipcMain.handle('kubectl:listDirectory', async (event, { podName, namespace, path }) => {
+  try {
+    const command = `wsl bash -lc "kubectl exec ${podName} -n ${namespace} -- ls -la ${path}"`;
+    const { stdout, stderr } = await execAsync(command, {
+      maxBuffer: 10 * 1024 * 1024,
+    });
+
+    if (stderr && !stdout) {
+      throw new Error(stderr);
+    }
+
+    return { success: true, data: stdout };
+  } catch (error) {
+    console.error('[kubectl:listDirectory] Error:', error.message);
+    return { success: false, error: error.message };
+  }
+});
+
+// Read file from pod
+ipcMain.handle('kubectl:readFile', async (event, { podName, namespace, filePath }) => {
+  try {
+    const command = `wsl bash -lc "kubectl exec ${podName} -n ${namespace} -- cat ${filePath}"`;
+    const { stdout, stderr } = await execAsync(command, {
+      maxBuffer: 10 * 1024 * 1024,
+    });
+
+    if (stderr && !stdout) {
+      throw new Error(stderr);
+    }
+
+    return { success: true, data: stdout };
+  } catch (error) {
+    console.error('[kubectl:readFile] Error:', error.message);
+    return { success: false, error: error.message };
+  }
+});

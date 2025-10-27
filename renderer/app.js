@@ -8,6 +8,7 @@ import PodGrid from './components/podGrid.js';
 import TerminalComponent from './components/terminal.js';
 import LogsComponent from './components/logs.js';
 import MetricsComponent from './components/metrics.js';
+import FileBrowser from './components/fileBrowser.js';
 
 class RickubeApp {
   constructor() {
@@ -22,6 +23,7 @@ class RickubeApp {
     this.terminal = new TerminalComponent('terminal-container', 'terminal-tabs');
     this.logs = new LogsComponent('logs-container');
     this.metrics = new MetricsComponent();
+    this.fileBrowser = new FileBrowser('files-container', this.kubectlService);
 
     // State
     this.currentNamespace = null;
@@ -39,6 +41,67 @@ class RickubeApp {
 
     // Initialize
     this.init();
+    this.setupPanelResize();
+  }
+
+  setupPanelResize() {
+    const mainContent = document.querySelector('.main-content');
+    const sidebar = document.getElementById('sidebar');
+    const podGridContainer = document.getElementById('pod-grid-container');
+    const rightPanel = document.getElementById('right-panel');
+    const handle1 = document.getElementById('resize-handle-1');
+    const handle2 = document.getElementById('resize-handle-2');
+
+    if (!mainContent || !sidebar || !podGridContainer || !rightPanel || !handle1 || !handle2) {
+      return;
+    }
+
+    let isResizing = false;
+    let currentHandle = null;
+
+    const startResize = (handle) => {
+      isResizing = true;
+      currentHandle = handle;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    };
+
+    const resize = (e) => {
+      if (!isResizing) return;
+
+      const mainContentRect = mainContent.getBoundingClientRect();
+      const mouseX = e.clientX - mainContentRect.left;
+      const totalWidth = mainContentRect.width;
+
+      if (currentHandle === handle1) {
+        // Resizing sidebar
+        const newSidebarWidth = (mouseX / totalWidth) * 100;
+        if (newSidebarWidth >= 10 && newSidebarWidth <= 40) {
+          sidebar.style.width = `${newSidebarWidth}%`;
+        }
+      } else if (currentHandle === handle2) {
+        // Resizing right panel
+        const rightPanelLeft = mouseX;
+        const newRightPanelWidth = ((totalWidth - rightPanelLeft) / totalWidth) * 100;
+        if (newRightPanelWidth >= 15 && newRightPanelWidth <= 50) {
+          rightPanel.style.width = `${newRightPanelWidth}%`;
+        }
+      }
+    };
+
+    const stopResize = () => {
+      if (isResizing) {
+        isResizing = false;
+        currentHandle = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    handle1.addEventListener('mousedown', () => startResize(handle1));
+    handle2.addEventListener('mousedown', () => startResize(handle2));
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', stopResize);
   }
 
   async init() {
@@ -356,6 +419,12 @@ class RickubeApp {
 
     if (tabName === 'terminal') {
       this.updateTerminalTab();
+    }
+
+    if (tabName === 'files' && this.currentPod && this.currentNamespace) {
+      this.fileBrowser.init(this.currentPod, this.currentNamespace);
+    } else if (tabName === 'files' && !this.currentPod) {
+      this.fileBrowser.clear();
     }
   }
 

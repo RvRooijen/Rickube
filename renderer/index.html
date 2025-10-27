@@ -39,7 +39,7 @@
   <!-- Main Content Area -->
   <main class="main-content">
     <!-- Left Sidebar: Namespaces -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>Namespaces</h2>
         <button class="refresh-btn" id="refresh-namespaces" title="Refresh namespaces">↻</button>
@@ -56,8 +56,11 @@
       </div>
     </aside>
 
+    <!-- Resize Handle 1 -->
+    <div class="panel-resize-handle" id="resize-handle-1"></div>
+
     <!-- Center: Pod Grid -->
-    <section class="pod-grid-container">
+    <section class="pod-grid-container" id="pod-grid-container">
       <div class="pod-grid-header">
         <h2>Pods</h2>
         <div class="pod-grid-info">
@@ -72,12 +75,16 @@
       </div>
     </section>
 
+    <!-- Resize Handle 2 -->
+    <div class="panel-resize-handle" id="resize-handle-2"></div>
+
     <!-- Right Panel: Context-aware tabs -->
-    <aside class="right-panel">
+    <aside class="right-panel" id="right-panel">
       <div class="panel-tabs">
         <button class="tab-btn active" data-tab="details">Details</button>
         <button class="tab-btn" data-tab="logs">Logs</button>
         <button class="tab-btn" data-tab="terminal">Terminal</button>
+        <button class="tab-btn" data-tab="files">Files</button>
       </div>
 
       <!-- Details Tab -->
@@ -118,6 +125,15 @@
               <code id="kubectl-command"></code>
             </div>
             <p class="help-text">Klik op de button hierboven om het commando te kopiëren en plak het in je terminal.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Files Tab -->
+      <div class="tab-content" id="files-tab">
+        <div class="files-container" id="files-container">
+          <div class="empty-state">
+            <p>Select a pod to browse files</p>
           </div>
         </div>
       </div>

@@ -134,6 +134,61 @@ class KubectlService {
     // If the command fails, assume no access
     return false;
   }
+
+  // List directory contents
+  async listDirectory(podName, namespace, path = '/') {
+    const result = await this.api.listDirectory(podName, namespace, path);
+    if (result.success) {
+      return this.parseDirectoryListing(result.data, path);
+    }
+    throw new Error(result.error);
+  }
+
+  // Parse ls -la output into structured data
+  parseDirectoryListing(output, currentPath) {
+    const lines = output.trim().split('\n');
+    const items = [];
+
+    for (let i = 1; i < lines.length; i++) { // Skip 'total' line
+      const line = lines[i].trim();
+      const parts = line.split(/\s+/);
+
+      if (parts.length < 9) continue;
+
+      const permissions = parts[0];
+      let name = parts.slice(8).join(' '); // Handle spaces in names
+
+      if (name === '.' || name === '..') continue;
+
+      // Handle symbolic links (format: "linkname -> target")
+      const isSymlink = permissions.startsWith('l');
+      if (isSymlink && name.includes(' -> ')) {
+        name = name.split(' -> ')[0]; // Only keep the link name, not the target
+      }
+
+      const isDirectory = permissions.startsWith('d') || isSymlink; // Treat symlinks as navigable
+
+      items.push({
+        name,
+        isDirectory,
+        permissions,
+        size: parts[4],
+        isSymlink,
+        path: currentPath.endsWith('/') ? currentPath + name : currentPath + '/' + name
+      });
+    }
+
+    return items;
+  }
+
+  // Read file contents
+  async readFile(podName, namespace, filePath) {
+    const result = await this.api.readFile(podName, namespace, filePath);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
 }
 
 export default KubectlService;
