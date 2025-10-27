@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <title>Rickube - Visual kubectl</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="../node_modules/xterm/css/xterm.css">
+  <!-- Load xterm as UMD modules via script tags -->
+  <script src="../node_modules/xterm/lib/xterm.js"></script>
+  <script src="../node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="app-title">
+      <span class="logo">⎈</span>
+      <h1>Rickube</h1>
+    </div>
+    <div class="top-bar-controls">
+      <div class="context-selector">
+        <label for="context-select">Context:</label>
+        <select id="context-select">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+      <div class="refresh-indicator" id="refresh-indicator">
+        <span class="spinner"></span>
+        <span class="refresh-text">Refreshing...</span>
+      </div>
+      <div class="connection-status" id="connection-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Checking...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Left Sidebar: Namespaces -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Namespaces</h2>
+        <button class="refresh-btn" id="refresh-namespaces" title="Refresh namespaces">↻</button>
+      </div>
+      <div class="sidebar-filter">
+        <label class="toggle-filter">
+          <input type="checkbox" id="filter-accessible" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Alleen toegankelijke</span>
+        </label>
+      </div>
+      <div class="namespace-list" id="namespace-list">
+        <div class="loading">Loading namespaces...</div>
+      </div>
+    </aside>
+
+    <!-- Center: Pod Grid -->
+    <section class="pod-grid-container">
+      <div class="pod-grid-header">
+        <h2>Pods</h2>
+        <div class="pod-grid-info">
+          <span id="namespace-name">Select a namespace</span>
+          <span class="pod-count" id="pod-count"></span>
+        </div>
+      </div>
+      <div class="pod-grid" id="pod-grid">
+        <div class="empty-state">
+          <p>Select a namespace to view pods</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Context-aware tabs -->
+    <aside class="right-panel">
+      <div class="panel-tabs">
+        <button class="tab-btn active" data-tab="details">Details</button>
+        <button class="tab-btn" data-tab="logs">Logs</button>
+        <button class="tab-btn" data-tab="terminal">Terminal</button>
+      </div>
+
+      <!-- Details Tab -->
+      <div class="tab-content active" id="details-tab">
+        <div class="details-container">
+          <div class="empty-state">
+            <p>Select a pod to view details</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Tab -->
+      <div class="tab-content" id="logs-tab">
+        <div class="logs-controls">
+          <button class="btn btn-small" id="logs-pause">Pause</button>
+          <button class="btn btn-small" id="logs-clear">Clear</button>
+          <button class="btn btn-small" id="logs-download">Download</button>
+        </div>
+        <div class="logs-container" id="logs-container">
+          <div class="empty-state">
+            <p>Select a pod to view logs</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal Tab -->
+      <div class="tab-content" id="terminal-tab">
+        <div class="terminal-controls">
+          <button class="btn btn-small" id="copy-exec-command">📋 Copy kubectl exec command</button>
+        </div>
+        <div class="terminal-instructions">
+          <div class="empty-state" id="terminal-empty">
+            <p>Selecteer een pod om het kubectl exec commando te kopiëren</p>
+          </div>
+          <div class="command-display" id="command-display" style="display: none;">
+            <h3>kubectl exec command:</h3>
+            <div class="command-box">
+              <code id="kubectl-command"></code>
+            </div>
+            <p class="help-text">Klik op de button hierboven om het commando te kopiëren en plak het in je terminal.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Error Toast -->
+  <div class="toast" id="error-toast">
+    <span class="toast-message"></span>
+    <button class="toast-close">×</button>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "rickube",
+  "version": "1.0.0",
+  "description": "Visual kubectl management tool built with Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging"
+  },
+  "keywords": [
+    "kubernetes",
+    "kubectl",
+    "electron",
+    "dashboard"
+  ],
+  "author": "Rick",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  }
+}
