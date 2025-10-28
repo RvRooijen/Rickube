@@ -515,7 +515,7 @@ class RickubeApp {
 // Start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   try {
-    new RickubeApp();
+    window.app = new RickubeApp();
   } catch (error) {
     console.error('[app] Failed to initialize:', error);
   }

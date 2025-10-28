@@ -6,6 +6,8 @@ class FileBrowser {
     this.currentNamespace = null;
     this.currentPath = '/';
     this.expandedPaths = new Set();
+    this.contextMenu = null;
+    this.setupContextMenu();
   }
 
   async init(podName, namespace) {
@@ -14,6 +16,46 @@ class FileBrowser {
     this.currentPath = '/';
     this.render();
     await this.loadDirectory('/');
+  }
+
+  setupContextMenu() {
+    // Create context menu element
+    this.contextMenu = document.createElement('div');
+    this.contextMenu.className = 'context-menu';
+    this.contextMenu.id = 'file-context-menu';
+    this.contextMenu.innerHTML = `
+      <div class="context-menu-item" data-action="download">
+        <span>📥</span>
+        <span>Download</span>
+      </div>
+    `;
+    document.body.appendChild(this.contextMenu);
+
+    // Hide context menu on click anywhere
+    document.addEventListener('click', () => {
+      this.hideContextMenu();
+    });
+
+    // Hide context menu on scroll
+    document.addEventListener('scroll', () => {
+      this.hideContextMenu();
+    }, true);
+
+    // Handle context menu item clicks
+    this.contextMenu.addEventListener('click', (e) => {
+      const item = e.target.closest('.context-menu-item');
+      if (item) {
+        const action = item.dataset.action;
+        const filePath = this.contextMenu.dataset.filePath;
+        const fileName = this.contextMenu.dataset.fileName;
+
+        if (action === 'download' && filePath && fileName) {
+          this.downloadFile(filePath, fileName);
+        }
+
+        this.hideContextMenu();
+      }
+    });
   }
 
   render() {
@@ -132,6 +174,8 @@ class FileBrowser {
     const div = document.createElement('div');
     div.className = 'file-tree-item';
     div.dataset.path = item.path;
+    div.dataset.name = item.name;
+    div.dataset.isDirectory = item.isDirectory;
 
     let icon;
     if (item.isSymlink) {
@@ -156,6 +200,15 @@ class FileBrowser {
         await this.previewFile(item.path, item.name);
       }
     });
+
+    // Add context menu for files only (not directories)
+    if (!item.isDirectory && !item.isSymlink) {
+      div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showContextMenu(e.clientX, e.clientY, item.path, item.name);
+      });
+    }
 
     return div;
   }
@@ -189,13 +242,81 @@ class FileBrowser {
         </div>
       `;
 
-      // Download button (placeholder for now)
+      // Download button - now with actual functionality
       document.getElementById('download-file').addEventListener('click', () => {
-        alert('Download functionaliteit komt later');
+        this.downloadFile(filePath, fileName);
       });
 
     } catch (error) {
       previewContainer.innerHTML = `<div class="error-state">Failed to read file: ${error.message}</div>`;
+    }
+  }
+
+  showContextMenu(x, y, filePath, fileName) {
+    // Store file info in context menu
+    this.contextMenu.dataset.filePath = filePath;
+    this.contextMenu.dataset.fileName = fileName;
+
+    // Position the menu
+    this.contextMenu.style.left = `${x}px`;
+    this.contextMenu.style.top = `${y}px`;
+
+    // Show the menu
+    this.contextMenu.classList.add('show');
+
+    // Adjust position if menu goes off-screen
+    const rect = this.contextMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      this.contextMenu.style.left = `${x - rect.width}px`;
+    }
+    if (rect.bottom > window.innerHeight) {
+      this.contextMenu.style.top = `${y - rect.height}px`;
+    }
+  }
+
+  hideContextMenu() {
+    if (this.contextMenu) {
+      this.contextMenu.classList.remove('show');
+    }
+  }
+
+  async downloadFile(filePath, fileName) {
+    try {
+      // Get reference to app instance for toast notifications
+      const app = window.app || { showSuccess: console.log, showError: console.error };
+
+      // Show loading toast
+      app.showSuccess(`Downloading ${fileName}...`);
+
+      // Read file content from pod
+      const content = await this.kubectlService.readFile(
+        this.currentPod,
+        this.currentNamespace,
+        filePath
+      );
+
+      // Create blob and download
+      const blob = new Blob([content], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+
+      // Create temporary download link
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+
+      // Cleanup
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Show success toast
+      app.showSuccess('File downloaded successfully');
+
+    } catch (error) {
+      console.error('Download failed:', error);
+      const app = window.app || { showError: console.error };
+      app.showError(`Failed to download file: ${error.message}`);
     }
   }
 

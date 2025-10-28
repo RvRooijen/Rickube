@@ -72,7 +72,8 @@ rickube/
 │   │   ├── podGrid.js     # Pod overview
 │   │   ├── terminal.js    # Terminal component
 │   │   ├── logs.js        # Log viewer
-│   │   └── metrics.js     # Metrics display
+│   │   ├── metrics.js     # Metrics display
+│   │   └── fileBrowser.js # File browser
 │   └── styles/
 │       └── main.css       # Dashboard styling
 ├── services/
