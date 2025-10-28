@@ -1,7 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const os = require('os');
-const pty = require('node-pty');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const { autoUpdater } = require('electron-updater');
@@ -33,7 +31,6 @@ autoUpdater.on('error', (err) => {
 });
 
 let mainWindow;
-const terminals = new Map();
 
 // Create the main window
 function createWindow() {
@@ -58,9 +55,6 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    // Clean up all terminals
-    terminals.forEach((term) => term.kill());
-    terminals.clear();
   });
 }
 
@@ -128,71 +122,6 @@ ipcMain.handle('kubectl:useContext', async (event, contextName) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
-});
-
-// Create a new terminal session
-ipcMain.handle('terminal:create', (event, { podName, namespace, terminalId }) => {
-  try {
-    const shell = os.platform() === 'win32' ? 'cmd.exe' : 'bash';
-    const args = os.platform() === 'win32'
-      ? ['/c', `wsl bash -lc "kubectl exec -it ${podName} -n ${namespace} -- /bin/bash || kubectl exec -it ${podName} -n ${namespace} -- /bin/sh"`]
-      : ['-c', `wsl bash -lc "kubectl exec -it ${podName} -n ${namespace} -- /bin/bash || kubectl exec -it ${podName} -n ${namespace} -- /bin/sh"`];
-
-    const term = pty.spawn(shell, args, {
-      name: 'xterm-color',
-      cols: 80,
-      rows: 30,
-      cwd: process.env.HOME || process.env.USERPROFILE,
-      env: process.env,
-    });
-
-    terminals.set(terminalId, term);
-
-    // Send data from terminal to renderer
-    term.on('data', (data) => {
-      mainWindow.webContents.send('terminal:data', { terminalId, data });
-    });
-
-    term.on('exit', () => {
-      mainWindow.webContents.send('terminal:exit', { terminalId });
-      terminals.delete(terminalId);
-    });
-
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-// Write to terminal
-ipcMain.handle('terminal:write', (event, { terminalId, data }) => {
-  const term = terminals.get(terminalId);
-  if (term) {
-    term.write(data);
-    return { success: true };
-  }
-  return { success: false, error: 'Terminal not found' };
-});
-
-// Resize terminal
-ipcMain.handle('terminal:resize', (event, { terminalId, cols, rows }) => {
-  const term = terminals.get(terminalId);
-  if (term) {
-    term.resize(cols, rows);
-    return { success: true };
-  }
-  return { success: false, error: 'Terminal not found' };
-});
-
-// Close terminal
-ipcMain.handle('terminal:close', (event, { terminalId }) => {
-  const term = terminals.get(terminalId);
-  if (term) {
-    term.kill();
-    terminals.delete(terminalId);
-    return { success: true };
-  }
-  return { success: false, error: 'Terminal not found' };
 });
 
 // Stream logs
