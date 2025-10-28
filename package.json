@@ -5,7 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --enable-logging"
+    "dev": "electron . --enable-logging",
+    "build": "electron-builder --win portable",
+    "build:dir": "electron-builder --win --dir",
+    "release": "electron-builder --win portable --publish always"
   },
   "keywords": [
     "kubernetes",
@@ -16,12 +19,35 @@
   "author": "Rick",
   "license": "MIT",
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "electron": "^38.4.0",
-    "@electron/rebuild": "^4.0.1"
+    "electron-builder": "^26.0.12"
   },
   "dependencies": {
-    "node-pty": "^1.0.0",
+    "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
-    "@xterm/addon-fit": "^0.10.0"
+    "electron-updater": "^6.6.2",
+    "node-pty": "^1.0.0"
+  },
+  "build": {
+    "appId": "com.rickube.app",
+    "productName": "Rickube",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "Rickube-${version}-portable.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "RvRooijen",
+      "repo": "Rickube"
+    }
   }
 }

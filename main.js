@@ -4,8 +4,33 @@ const os = require('os');
 const pty = require('node-pty');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const { autoUpdater } = require('electron-updater');
 
 const execAsync = promisify(exec);
+
+// Configure auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+// Auto-updater event handlers
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info.version);
+  // Notify renderer process
+  if (mainWindow) {
+    mainWindow.webContents.send('update-available', info);
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded', info);
+  }
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('Auto-updater error:', err);
+});
 
 let mainWindow;
 const terminals = new Map();
@@ -39,7 +64,15 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+// Check for updates when app is ready
+app.whenReady().then(() => {
+  createWindow();
+
+  // Check for updates after 3 seconds (give time for window to load)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates();
+  }, 3000);
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
