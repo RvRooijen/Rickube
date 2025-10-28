@@ -8,7 +8,8 @@
     "dev": "electron . --enable-logging",
     "build": "electron-builder --win portable",
     "build:dir": "electron-builder --win --dir",
-    "release": "electron-builder --win portable --publish always"
+    "release": "electron-builder --win portable --publish always",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
     "kubernetes",
@@ -19,7 +20,6 @@
   "author": "Rick",
   "license": "MIT",
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
     "electron": "^38.4.0",
     "electron-builder": "^26.0.12"
   },
