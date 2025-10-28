@@ -16,12 +16,12 @@
   "author": "Rick",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-rebuild": "^3.2.9"
+    "electron": "^38.4.0",
+    "@electron/rebuild": "^4.0.1"
   },
   "dependencies": {
     "node-pty": "^1.0.0",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0"
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0"
   }
 }
