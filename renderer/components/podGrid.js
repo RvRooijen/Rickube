@@ -7,6 +7,69 @@ class PodGrid {
     this.pods = [];
     this.selectedPod = null;
     this.metrics = new Map();
+    this.filterText = '';
+    this.setupSearchHandlers();
+  }
+
+  // Setup search input handlers
+  setupSearchHandlers() {
+    const searchInput = document.getElementById('pod-search');
+    const clearBtn = document.getElementById('clear-search');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.filterText = e.target.value.toLowerCase();
+        this.render(this.pods);
+        this.updateClearButtonVisibility();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.clearSearch();
+      });
+    }
+  }
+
+  // Clear search
+  clearSearch() {
+    const searchInput = document.getElementById('pod-search');
+    if (searchInput) {
+      searchInput.value = '';
+      this.filterText = '';
+      this.render(this.pods);
+      this.updateClearButtonVisibility();
+    }
+  }
+
+  // Update clear button visibility
+  updateClearButtonVisibility() {
+    const clearBtn = document.getElementById('clear-search');
+    if (clearBtn) {
+      clearBtn.style.display = this.filterText ? 'flex' : 'none';
+    }
+  }
+
+  // Filter pods based on search text
+  getFilteredPods() {
+    if (!this.filterText) {
+      return this.pods;
+    }
+    return this.pods.filter(pod =>
+      pod.metadata.name.toLowerCase().includes(this.filterText)
+    );
+  }
+
+  // Update pod count display
+  updatePodCount(filteredCount, totalCount) {
+    const podCountEl = document.getElementById('pod-count');
+    if (podCountEl) {
+      if (filteredCount === totalCount) {
+        podCountEl.textContent = `(${totalCount} pod${totalCount !== 1 ? 's' : ''})`;
+      } else {
+        podCountEl.textContent = `(${filteredCount} of ${totalCount} pod${totalCount !== 1 ? 's' : ''})`;
+      }
+    }
   }
 
   // Render the pod grid
@@ -15,12 +78,25 @@ class PodGrid {
 
     if (!pods || pods.length === 0) {
       this.container.innerHTML = '<div class="empty-state"><p>No pods found in this namespace</p></div>';
+      this.updatePodCount(0, 0);
+      return;
+    }
+
+    // Get filtered pods
+    const filteredPods = this.getFilteredPods();
+
+    // Update pod count
+    this.updatePodCount(filteredPods.length, pods.length);
+
+    // Show no results message if filter yields no results
+    if (filteredPods.length === 0) {
+      this.container.innerHTML = '<div class="empty-state"><p>No pods match your search</p></div>';
       return;
     }
 
     this.container.innerHTML = '';
 
-    pods.forEach(pod => {
+    filteredPods.forEach(pod => {
       const card = this.createPodCard(pod);
       this.container.appendChild(card);
     });
@@ -180,6 +256,11 @@ class PodGrid {
   // Show error state
   showError(message) {
     this.container.innerHTML = `<div class="error-state">${message}</div>`;
+  }
+
+  // Reset search when namespace changes
+  resetSearch() {
+    this.clearSearch();
   }
 }
 

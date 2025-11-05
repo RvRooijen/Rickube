@@ -297,6 +297,9 @@ class RickubeApp {
 
     this.namespaceName.textContent = namespaceName;
 
+    // Clear pod search when switching namespace
+    this.podGrid.resetSearch();
+
     // Load pods for this namespace
     await this.loadPods(namespaceName);
 
@@ -321,7 +324,6 @@ class RickubeApp {
       const pods = podsData.items;
 
       this.podGrid.render(pods);
-      this.podCount.textContent = `${pods.length} pod${pods.length !== 1 ? 's' : ''}`;
       this.sidebar.updatePodCount(namespace, pods.length);
 
       this.showRefreshing(false);

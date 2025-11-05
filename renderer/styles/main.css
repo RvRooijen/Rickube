@@ -337,17 +337,69 @@ body {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
+  gap: 16px;
 }
 
 .pod-grid-header h2 {
   font-size: 16px;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pod-search-container {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+}
+
+.pod-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 12px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.pod-search-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.pod-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.clear-search-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .pod-grid-info {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 #namespace-name {
