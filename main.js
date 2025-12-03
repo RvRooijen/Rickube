@@ -112,20 +112,43 @@ ipcMain.handle('kubectl:exec', async (event, args) => {
   }
 });
 
-// Get kubeconfig contexts
+// Get kubeconfig contexts using kubectx
 ipcMain.handle('kubectl:getContexts', async () => {
   try {
-    const { stdout } = await execAsync('wsl bash -lc "kubectl config get-contexts -o json"');
-    return { success: true, data: JSON.parse(stdout) };
+    // Get list of contexts from kubectx
+    const { stdout: contextList } = await execAsync('wsl bash -lc "kubectx"');
+    const contexts = contextList.trim().split('\n').filter(c => c);
+
+    // Get current context
+    const { stdout: currentCtx } = await execAsync('wsl bash -lc "kubectx -c"');
+    const current = currentCtx.trim();
+
+    // Build context objects (kubectx doesn't provide cluster info, so we get it from kubectl)
+    const { stdout: configJson } = await execAsync('wsl bash -lc "kubectl config view -o json"');
+    const config = JSON.parse(configJson);
+
+    const items = contexts.map(name => {
+      const ctxConfig = config.contexts?.find(c => c.name === name);
+      return {
+        name,
+        context: {
+          cluster: ctxConfig?.context?.cluster || 'unknown',
+          namespace: ctxConfig?.context?.namespace || 'default',
+          user: ctxConfig?.context?.user || 'unknown'
+        }
+      };
+    });
+
+    return { success: true, data: { items, current } };
   } catch (error) {
     return { success: false, error: error.message };
   }
 });
 
-// Switch kubectl context
+// Switch kubectl context using kubectx
 ipcMain.handle('kubectl:useContext', async (event, contextName) => {
   try {
-    await execAsync(`wsl bash -lc "kubectl config use-context ${contextName}"`);
+    await execAsync(`wsl bash -lc "kubectx ${contextName}"`);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
