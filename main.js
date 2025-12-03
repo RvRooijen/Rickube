@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const { promisify } = require('util');
 const { autoUpdater } = require('electron-updater');
 
@@ -230,7 +230,11 @@ ipcMain.handle('portforward:start', (event, { resourceType, name, namespace, loc
     const forwardId = `pf-${resourceType}-${name}-${localPort}-${Date.now()}`;
     const cmd = `kubectl port-forward ${resourceType}/${name} -n ${namespace} ${localPort}:${remotePort}`;
 
-    const child = exec(`wsl bash -lc "${cmd.replace(/"/g, '\\"')}"`);
+    // Use spawn instead of exec for long-running processes
+    const child = spawn('wsl', ['bash', '-lc', cmd], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: false
+    });
 
     portForwardProcesses.set(forwardId, {
       process: child,
@@ -244,19 +248,27 @@ ipcMain.handle('portforward:start', (event, { resourceType, name, namespace, loc
 
     child.stdout.on('data', (data) => {
       if (mainWindow) {
-        mainWindow.webContents.send('portforward:data', { forwardId, data });
+        mainWindow.webContents.send('portforward:data', { forwardId, data: data.toString() });
       }
     });
 
     child.stderr.on('data', (data) => {
       if (mainWindow) {
-        mainWindow.webContents.send('portforward:error', { forwardId, data });
+        mainWindow.webContents.send('portforward:error', { forwardId, data: data.toString() });
       }
     });
 
     child.on('exit', (code) => {
       if (mainWindow) {
         mainWindow.webContents.send('portforward:exit', { forwardId, code });
+      }
+      portForwardProcesses.delete(forwardId);
+    });
+
+    child.on('error', (error) => {
+      console.error(`[portforward:${forwardId}] Process error:`, error.message);
+      if (mainWindow) {
+        mainWindow.webContents.send('portforward:error', { forwardId, data: error.message });
       }
       portForwardProcesses.delete(forwardId);
     });
@@ -268,10 +280,22 @@ ipcMain.handle('portforward:start', (event, { resourceType, name, namespace, loc
   }
 });
 
-ipcMain.handle('portforward:stop', (event, { forwardId }) => {
+ipcMain.handle('portforward:stop', async (event, { forwardId }) => {
   const forward = portForwardProcesses.get(forwardId);
   if (forward) {
-    forward.process.kill();
+    // Kill the kubectl process in WSL by finding it via the port
+    try {
+      const port = forward.localPort;
+      await execAsync(`wsl bash -lc "kill $(lsof -t -i:${port}) 2>/dev/null || true"`);
+    } catch (e) {
+      // Ignore errors from kill command
+    }
+    // Also kill the Windows-side spawn process
+    try {
+      forward.process.kill('SIGKILL');
+    } catch (e) {
+      // Ignore if already dead
+    }
     portForwardProcesses.delete(forwardId);
     return { success: true };
   }
@@ -294,12 +318,63 @@ ipcMain.handle('portforward:list', () => {
   return { success: true, data: forwards };
 });
 
-ipcMain.handle('portforward:stopAll', () => {
-  portForwardProcesses.forEach((value) => {
-    value.process.kill();
-  });
+ipcMain.handle('portforward:stopAll', async () => {
+  for (const [forwardId, forward] of portForwardProcesses) {
+    try {
+      await execAsync(`wsl bash -lc "kill $(lsof -t -i:${forward.localPort}) 2>/dev/null || true"`);
+    } catch (e) {
+      // Ignore errors
+    }
+    try {
+      forward.process.kill('SIGKILL');
+    } catch (e) {
+      // Ignore if already dead
+    }
+  }
   portForwardProcesses.clear();
   return { success: true };
+});
+
+// Check if a port is in use and get process info
+ipcMain.handle('portforward:checkPort', async (event, { port }) => {
+  try {
+    // Use lsof in WSL to check what's using the port
+    const { stdout } = await execAsync(`wsl bash -lc "lsof -i :${port} -sTCP:LISTEN 2>/dev/null | tail -n +2 | head -1"`, { maxBuffer: 1024 * 1024 });
+    const line = stdout.trim();
+
+    if (!line) {
+      return { success: true, inUse: false };
+    }
+
+    // Parse lsof output: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+    const parts = line.split(/\s+/);
+    const processName = parts[0] || 'unknown';
+    const pid = parseInt(parts[1], 10);
+
+    if (isNaN(pid)) {
+      return { success: true, inUse: false };
+    }
+
+    return {
+      success: true,
+      inUse: true,
+      pid,
+      processName
+    };
+  } catch (error) {
+    // If lsof fails, port is likely free
+    return { success: true, inUse: false };
+  }
+});
+
+// Kill a process by PID
+ipcMain.handle('portforward:killProcess', async (event, { pid }) => {
+  try {
+    await execAsync(`wsl bash -lc "kill -9 ${pid}"`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // Cleanup port-forwards on app quit

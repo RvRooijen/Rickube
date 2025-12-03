@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('api', {
     stop: (data) => ipcRenderer.invoke('portforward:stop', data),
     list: () => ipcRenderer.invoke('portforward:list'),
     stopAll: () => ipcRenderer.invoke('portforward:stopAll'),
+    checkPort: (data) => ipcRenderer.invoke('portforward:checkPort', data),
+    killProcess: (data) => ipcRenderer.invoke('portforward:killProcess', data),
     onData: (callback) => {
       ipcRenderer.on('portforward:data', (event, data) => callback(data));
     },

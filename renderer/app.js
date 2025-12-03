@@ -514,10 +514,21 @@ class RickubeApp {
     const modal = document.getElementById('configmap-modal');
     const modalName = document.getElementById('configmap-modal-name');
     const dataList = document.getElementById('configmap-data-list');
+    const closeBtn = document.getElementById('configmap-modal-close');
 
     modalName.textContent = title;
     dataList.innerHTML = `<pre class="yaml-output">${this.escapeHtml(yaml)}</pre>`;
     modal.classList.add('show');
+
+    closeBtn.onclick = () => {
+      modal.classList.remove('show');
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+      }
+    };
   }
 
   async updateDetailsTab() {
@@ -1210,21 +1221,65 @@ class RickubeApp {
     const resourceNameEl = document.getElementById('pf-resource-name');
     const localPortInput = document.getElementById('pf-local-port');
     const remotePortInput = document.getElementById('pf-remote-port');
+    const portStatusEl = document.getElementById('pf-port-status');
     const startBtn = document.getElementById('pf-start');
+    const killBtn = document.getElementById('pf-kill');
     const cancelBtn = document.getElementById('pf-cancel');
     const closeBtn = document.getElementById('pf-modal-close');
+
+    let currentPortInfo = null;
+
+    const checkPort = async (port) => {
+      portStatusEl.innerHTML = '<span class="checking">Checking port...</span>';
+      killBtn.style.display = 'none';
+
+      const result = await window.api.portforward.checkPort({ port });
+      if (result.success && result.inUse) {
+        currentPortInfo = result;
+        portStatusEl.innerHTML = `<span class="port-in-use">Port ${port} in use by: <strong>${result.processName}</strong> (PID: ${result.pid})</span>`;
+        killBtn.style.display = 'inline-block';
+      } else {
+        currentPortInfo = null;
+        portStatusEl.innerHTML = `<span class="port-available">Port ${port} is available</span>`;
+      }
+    };
 
     resourceNameEl.textContent = `${resourceType}/${name}`;
     localPortInput.value = defaultPort;
     remotePortInput.value = defaultPort;
     modal.classList.add('show');
 
+    // Check port on open and on change
+    await checkPort(defaultPort);
+    localPortInput.oninput = () => {
+      const port = parseInt(localPortInput.value, 10);
+      if (port > 0 && port <= 65535) {
+        checkPort(port);
+      }
+    };
+
     return new Promise((resolve) => {
       const cleanup = () => {
         modal.classList.remove('show');
         startBtn.onclick = null;
+        killBtn.onclick = null;
         cancelBtn.onclick = null;
         closeBtn.onclick = null;
+        localPortInput.oninput = null;
+        portStatusEl.innerHTML = '';
+        killBtn.style.display = 'none';
+      };
+
+      killBtn.onclick = async () => {
+        if (currentPortInfo && currentPortInfo.pid) {
+          const result = await window.api.portforward.killProcess({ pid: currentPortInfo.pid });
+          if (result.success) {
+            this.showSuccess(`Process ${currentPortInfo.processName} (PID: ${currentPortInfo.pid}) killed`);
+            await checkPort(parseInt(localPortInput.value, 10));
+          } else {
+            this.showError(`Failed to kill process: ${result.error}`);
+          }
+        }
       };
 
       startBtn.onclick = async () => {

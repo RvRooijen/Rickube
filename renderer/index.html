@@ -302,6 +302,7 @@
         <div class="form-group">
           <label for="pf-local-port">Local Port:</label>
           <input type="number" id="pf-local-port" min="1" max="65535" value="8080">
+          <div id="pf-port-status" class="port-status"></div>
         </div>
         <div class="form-group">
           <label for="pf-remote-port">Remote Port:</label>
@@ -310,6 +311,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pf-cancel">Cancel</button>
+        <button class="btn btn-danger" id="pf-kill" style="display: none;">Kill Process</button>
         <button class="btn" id="pf-start">Start Forward</button>
       </div>
     </div>

@@ -18,23 +18,6 @@ class PodGrid {
     this.contextMenu = document.createElement('div');
     this.contextMenu.className = 'pod-context-menu';
     this.contextMenu.innerHTML = `
-      <div class="context-menu-item" data-action="logs">
-        <span class="context-menu-icon">📋</span>
-        <span>View Logs</span>
-      </div>
-      <div class="context-menu-item" data-action="terminal">
-        <span class="context-menu-icon">⌨️</span>
-        <span>Terminal</span>
-      </div>
-      <div class="context-menu-item" data-action="describe">
-        <span class="context-menu-icon">📄</span>
-        <span>Describe</span>
-      </div>
-      <div class="context-menu-item" data-action="files">
-        <span class="context-menu-icon">📁</span>
-        <span>Browse Files</span>
-      </div>
-      <div class="context-menu-divider"></div>
       <div class="context-menu-item" data-action="yaml">
         <span class="context-menu-icon">📝</span>
         <span>View YAML</span>

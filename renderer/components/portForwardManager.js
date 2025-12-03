@@ -17,6 +17,12 @@ class PortForwardManager {
 
     window.api.portforward.onError(({ forwardId, data }) => {
       console.warn(`[portforward:${forwardId}] Error: ${data}`);
+      // Show error notification if it's a binding error
+      if (data.includes('address already in use') || data.includes('unable to listen')) {
+        this.showError(`Port forward failed: port already in use`);
+      } else if (data.includes('error')) {
+        this.showError(`Port forward error: ${data}`);
+      }
     });
 
     window.api.portforward.onExit(({ forwardId }) => {
@@ -28,6 +34,19 @@ class PortForwardManager {
 
     // Refresh list on startup
     this.refreshList();
+  }
+
+  showError(message) {
+    // Create toast notification for errors
+    const toast = document.createElement('div');
+    toast.className = 'toast error';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 5000);
   }
 
   async startForward(resourceType, name, namespace, localPort, remotePort) {
