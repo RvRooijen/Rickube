@@ -771,7 +771,7 @@ class RickubeApp {
     statsContainer.innerHTML = '';
     eventsContainer.innerHTML = '<div class="operation-events-empty">Loading events...</div>';
 
-    modal.classList.add('active');
+    modal.classList.add('show');
 
     // Polling interval reference
     let pollInterval = null;
@@ -782,7 +782,7 @@ class RickubeApp {
         clearInterval(pollInterval);
         pollInterval = null;
       }
-      modal.classList.remove('active');
+      modal.classList.remove('show');
       this.loadWorkloads(this.currentNamespace);
     };
 
