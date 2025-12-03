@@ -39,7 +39,9 @@ class ClusterComponent {
 
   renderSection(id, title, items, cardRenderer) {
     const section = document.createElement('div');
-    section.className = `workload-section${this.collapsedSections.has(id) ? ' collapsed' : ''}`;
+    // Collapse by default if empty, or if manually collapsed
+    const isCollapsed = items.length === 0 || this.collapsedSections.has(id);
+    section.className = `workload-section${isCollapsed ? ' collapsed' : ''}`;
     section.dataset.sectionId = id;
 
     const header = document.createElement('div');
