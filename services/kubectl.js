@@ -286,6 +286,32 @@ class KubectlService {
     // Get basic history first
     const basicHistory = await this.getRolloutHistory(name, namespace);
 
+    // Get ReplicaSets for this deployment to get timestamps
+    const rsResult = await this.api.exec([
+      'get', 'replicasets', '-n', namespace,
+      '-l', `app=${name}`,
+      '-o', 'json'
+    ]).catch(() => ({ success: false }));
+
+    let replicaSets = [];
+    if (rsResult.success) {
+      try {
+        const rsData = JSON.parse(rsResult.data);
+        replicaSets = rsData.items || [];
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    // Build a map of revision -> timestamp from ReplicaSets
+    const revisionTimestamps = {};
+    for (const rs of replicaSets) {
+      const revision = rs.metadata?.annotations?.['deployment.kubernetes.io/revision'];
+      if (revision) {
+        revisionTimestamps[revision] = rs.metadata?.creationTimestamp;
+      }
+    }
+
     // Get detailed info for each revision (image, etc.)
     const detailedHistory = await Promise.all(
       basicHistory.map(async (rev) => {
@@ -297,12 +323,16 @@ class KubectlService {
           ]);
           if (result.success) {
             const details = this.parseRevisionDetails(result.data);
-            return { ...rev, ...details };
+            return {
+              ...rev,
+              ...details,
+              timestamp: revisionTimestamps[rev.revision] || null
+            };
           }
         } catch (e) {
           // Ignore errors for individual revisions
         }
-        return rev;
+        return { ...rev, timestamp: revisionTimestamps[rev.revision] || null };
       })
     );
 

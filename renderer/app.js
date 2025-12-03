@@ -26,7 +26,14 @@ class RickubeApp {
 
     // Components
     this.sidebar = new Sidebar('namespace-list', this.onNamespaceSelect.bind(this));
-    this.podGrid = new PodGrid('pod-grid', this.onPodSelect.bind(this));
+    this.podGrid = new PodGrid('pod-grid', this.onPodSelect.bind(this), {
+      logs: this.onPodContextLogs.bind(this),
+      terminal: this.onPodContextTerminal.bind(this),
+      describe: this.onPodContextDescribe.bind(this),
+      files: this.onPodContextFiles.bind(this),
+      yaml: this.onPodContextYaml.bind(this),
+      delete: this.onPodContextDelete.bind(this),
+    });
     this.terminal = new TerminalComponent('terminal-container', 'terminal-tabs');
     this.logs = new LogsComponent('logs-container');
     this.metrics = new MetricsComponent();
@@ -430,6 +437,87 @@ class RickubeApp {
     if (this.selectedTab === 'logs') {
       await this.logs.startLogs(podName, this.currentNamespace);
     }
+  }
+
+  // Pod context menu handlers
+  onPodContextLogs(podName, podData) {
+    this.currentPod = podName;
+    this.currentPodData = podData;
+    this.switchTab('logs');
+    this.logs.startLogs(podName, this.currentNamespace);
+  }
+
+  onPodContextTerminal(podName, podData) {
+    this.currentPod = podName;
+    this.currentPodData = podData;
+    this.switchTab('terminal');
+    // Get first container name
+    const containerName = podData.spec?.containers?.[0]?.name;
+    if (containerName) {
+      this.terminal.createNewTab(this.currentNamespace, podName, containerName);
+    }
+  }
+
+  onPodContextDescribe(podName, podData) {
+    this.currentPod = podName;
+    this.currentPodData = podData;
+    this.switchTab('details');
+    this.updateDetailsTab();
+  }
+
+  onPodContextFiles(podName, podData) {
+    this.currentPod = podName;
+    this.currentPodData = podData;
+    this.switchTab('files');
+    const containerName = podData.spec?.containers?.[0]?.name;
+    if (containerName) {
+      this.fileBrowser.loadDirectory(this.currentNamespace, podName, containerName, '/');
+    }
+  }
+
+  async onPodContextYaml(podName, podData) {
+    // Get full YAML for the pod
+    try {
+      const result = await this.kubectlService.api.exec([
+        'get', 'pod', podName, '-n', this.currentNamespace, '-o', 'yaml'
+      ]);
+      if (result.success) {
+        this.showYamlModal('Pod: ' + podName, result.data);
+      }
+    } catch (error) {
+      this.showError('Failed to get pod YAML: ' + error.message);
+    }
+  }
+
+  async onPodContextDelete(podName, podData) {
+    const confirmed = await this.showConfirmModal(
+      'Delete Pod',
+      `Are you sure you want to delete pod "${podName}"? This action cannot be undone.`
+    );
+
+    if (confirmed) {
+      try {
+        await this.kubectlService.api.exec([
+          'delete', 'pod', podName, '-n', this.currentNamespace
+        ]);
+        this.showSuccess(`Pod ${podName} deleted`);
+        // Refresh pod list
+        await this.loadPods(this.currentNamespace);
+      } catch (error) {
+        this.showError('Failed to delete pod: ' + error.message);
+      }
+    }
+  }
+
+  showYamlModal(title, yaml) {
+    // Reuse configmap modal for showing YAML
+    const modal = document.getElementById('configmap-modal');
+    const modalName = document.getElementById('configmap-modal-name');
+    const dataList = document.getElementById('configmap-data-list');
+
+    modalName.textContent = title;
+    dataList.innerHTML = `<pre class="yaml-output">${this.escapeHtml(yaml)}</pre>`;
+    modal.classList.add('show');
   }
 
   async updateDetailsTab() {
@@ -911,6 +999,30 @@ class RickubeApp {
     return date.toLocaleTimeString();
   }
 
+  formatRevisionTimestamp(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Format: "Dec 3, 14:30" or "Dec 3, 14:30 (2d ago)"
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    if (diffDays === 0) {
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      if (diffHours === 0) {
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        return `${timeStr} (${diffMins}m ago)`;
+      }
+      return `${timeStr} (${diffHours}h ago)`;
+    } else if (diffDays < 7) {
+      return `${dateStr}, ${timeStr} (${diffDays}d ago)`;
+    }
+    return `${dateStr}, ${timeStr}`;
+  }
+
   async onWorkloadRollback(name) {
     // Show rollback modal with revision history
     const selectedRevision = await this.showRollbackModal(name);
@@ -996,13 +1108,18 @@ class RickubeApp {
             badge = '<span class="rollback-revision-badge previous">Previous</span>';
           }
 
+          const timestamp = rev.timestamp ? this.formatRevisionTimestamp(rev.timestamp) : '';
+
           return `
             <div class="rollback-revision ${isCurrent ? 'current' : ''}"
                  data-revision="${rev.revision}"
                  ${isCurrent ? '' : 'tabindex="0"'}>
               <div class="rollback-revision-header">
                 <span class="rollback-revision-number">Revision #${rev.revision}</span>
-                ${badge}
+                <div class="rollback-revision-meta">
+                  ${timestamp ? `<span class="rollback-revision-time">${timestamp}</span>` : ''}
+                  ${badge}
+                </div>
               </div>
               <div class="rollback-revision-image">${rev.image || 'Unknown image'}</div>
               ${rev.changeReason && rev.changeReason !== '<none>'

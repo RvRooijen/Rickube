@@ -1,12 +1,93 @@
 // podGrid.js - Pod grid component
 
 class PodGrid {
-  constructor(containerId, onPodSelect) {
+  constructor(containerId, onPodSelect, callbacks = {}) {
     this.container = document.getElementById(containerId);
     this.onPodSelect = onPodSelect;
+    this.callbacks = callbacks;
     this.pods = [];
     this.selectedPod = null;
     this.metrics = new Map();
+
+    // Setup context menu
+    this.setupContextMenu();
+  }
+
+  setupContextMenu() {
+    // Create context menu element
+    this.contextMenu = document.createElement('div');
+    this.contextMenu.className = 'pod-context-menu';
+    this.contextMenu.innerHTML = `
+      <div class="context-menu-item" data-action="logs">
+        <span class="context-menu-icon">📋</span>
+        <span>View Logs</span>
+      </div>
+      <div class="context-menu-item" data-action="terminal">
+        <span class="context-menu-icon">⌨️</span>
+        <span>Terminal</span>
+      </div>
+      <div class="context-menu-item" data-action="describe">
+        <span class="context-menu-icon">📄</span>
+        <span>Describe</span>
+      </div>
+      <div class="context-menu-item" data-action="files">
+        <span class="context-menu-icon">📁</span>
+        <span>Browse Files</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" data-action="yaml">
+        <span class="context-menu-icon">📝</span>
+        <span>View YAML</span>
+      </div>
+      <div class="context-menu-item" data-action="copy-name">
+        <span class="context-menu-icon">📎</span>
+        <span>Copy Pod Name</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item danger" data-action="delete">
+        <span class="context-menu-icon">🗑️</span>
+        <span>Delete Pod</span>
+      </div>
+    `;
+    document.body.appendChild(this.contextMenu);
+
+    // Hide on click outside
+    document.addEventListener('click', () => this.hideContextMenu());
+
+    // Handle context menu item clicks
+    this.contextMenu.querySelectorAll('.context-menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = item.dataset.action;
+        if (this.contextMenuPod && this.callbacks[action]) {
+          this.callbacks[action](this.contextMenuPod.name, this.contextMenuPod.data);
+        } else if (action === 'copy-name' && this.contextMenuPod) {
+          navigator.clipboard.writeText(this.contextMenuPod.name);
+        }
+        this.hideContextMenu();
+      });
+    });
+  }
+
+  showContextMenu(x, y, podName, podData) {
+    this.contextMenuPod = { name: podName, data: podData };
+    this.contextMenu.style.left = `${x}px`;
+    this.contextMenu.style.top = `${y}px`;
+    this.contextMenu.classList.add('show');
+
+    // Adjust if menu goes off screen
+    const rect = this.contextMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      this.contextMenu.style.left = `${x - rect.width}px`;
+    }
+    if (rect.bottom > window.innerHeight) {
+      this.contextMenu.style.top = `${y - rect.height}px`;
+    }
+  }
+
+  hideContextMenu() {
+    this.contextMenu.classList.remove('show');
+    this.contextMenuPod = null;
   }
 
   // Render the pod grid
@@ -100,6 +181,12 @@ class PodGrid {
     // Click handler
     card.addEventListener('click', () => {
       this.selectPod(pod.metadata.name, pod);
+    });
+
+    // Right-click context menu
+    card.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.showContextMenu(e.clientX, e.clientY, pod.metadata.name, pod);
     });
 
     return card;
