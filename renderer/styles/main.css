@@ -1636,3 +1636,410 @@ body {
   font-size: 11px;
   margin-left: 8px;
 }
+
+/* ============================================
+   Networking, Config, Storage, Cluster Views
+   ============================================ */
+
+.networking-container,
+.config-container,
+.storage-container,
+.cluster-container {
+  padding: 16px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Service Type Badges */
+.service-type {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.service-type.clusterip {
+  background-color: rgba(0, 122, 204, 0.2);
+  color: var(--accent-blue);
+}
+
+.service-type.nodeport {
+  background-color: rgba(78, 201, 176, 0.2);
+  color: var(--status-running);
+}
+
+.service-type.loadbalancer {
+  background-color: rgba(137, 209, 133, 0.2);
+  color: var(--status-succeeded);
+}
+
+.service-type.externalname {
+  background-color: rgba(220, 220, 170, 0.2);
+  color: var(--status-pending);
+}
+
+/* Secret Type Badges */
+.secret-type {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: rgba(133, 133, 133, 0.2);
+  color: var(--text-secondary);
+}
+
+.secret-type-tls {
+  background-color: rgba(78, 201, 176, 0.2);
+  color: var(--status-running);
+}
+
+.secret-type-docker {
+  background-color: rgba(0, 122, 204, 0.2);
+  color: var(--accent-blue);
+}
+
+.secret-type-sa {
+  background-color: rgba(220, 220, 170, 0.2);
+  color: var(--status-pending);
+}
+
+/* Node Card Styling */
+.node-card {
+  padding: 12px;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.node-role {
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: rgba(0, 122, 204, 0.2);
+  color: var(--accent-blue);
+  border-radius: 3px;
+  margin-left: 8px;
+}
+
+.node-metrics {
+  display: flex;
+  gap: 24px;
+  margin: 12px 0;
+  padding: 8px 12px;
+  background-color: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.node-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.node-metric-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.node-metric-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-green);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.node-conditions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.node-condition {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.node-condition.condition-warning {
+  background-color: rgba(220, 220, 170, 0.1);
+  color: var(--status-pending);
+}
+
+.node-condition.condition-error {
+  background-color: rgba(244, 135, 113, 0.1);
+  color: var(--status-failed);
+}
+
+.condition-type {
+  font-weight: 600;
+}
+
+.condition-message {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* Full width info item */
+.workload-card-info-full {
+  flex-basis: 100%;
+}
+
+/* ============================================
+   Port Forwards Panel
+   ============================================ */
+
+.port-forwards-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 350px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.port-forwards-panel.collapsed .port-forwards-content {
+  display: none;
+}
+
+.port-forwards-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background-color: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.port-forwards-title {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.port-forwards-count {
+  background-color: var(--accent-blue);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.port-forwards-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.port-forwards-toggle:hover {
+  color: var(--text-primary);
+}
+
+.port-forwards-content {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.port-forwards-list {
+  padding: 8px;
+}
+
+.port-forwards-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.port-forward-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.port-forward-item:last-child {
+  margin-bottom: 0;
+}
+
+.port-forward-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.port-forward-resource {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.port-forward-namespace {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.port-forward-ports {
+  font-size: 12px;
+  color: var(--accent-green);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.port-forward-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.port-forward-link {
+  color: var(--accent-blue);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.port-forward-link:hover {
+  text-decoration: underline;
+}
+
+.port-forward-stop {
+  background: none;
+  border: 1px solid var(--status-failed);
+  color: var(--status-failed);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.port-forward-stop:hover {
+  background-color: var(--status-failed);
+  color: white;
+}
+
+/* ============================================
+   ConfigMap & Secret Modals
+   ============================================ */
+
+.modal-wide {
+  max-width: 700px;
+  width: 90%;
+}
+
+.modal-wide .modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.config-data-list,
+.secret-data-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-data-item,
+.secret-data-item {
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.config-data-key,
+.secret-data-key {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  margin-bottom: 8px;
+}
+
+.config-data-value {
+  background-color: var(--bg-primary);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.config-data-value code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.secret-data-value {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.secret-data-value code {
+  flex: 1;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  background-color: var(--bg-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.secret-data-value code.masked {
+  color: var(--text-secondary);
+}
+
+.reveal-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.secret-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background-color: rgba(220, 220, 170, 0.1);
+  border: 1px solid var(--status-pending);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  color: var(--status-pending);
+  font-size: 13px;
+}
+
+.warning-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: var(--status-pending);
+  color: var(--bg-primary);
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.config-data-empty,
+.secret-data-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}

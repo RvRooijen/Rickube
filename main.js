@@ -218,3 +218,94 @@ ipcMain.handle('kubectl:readFile', async (event, { podName, namespace, filePath 
     return { success: false, error: error.message };
   }
 });
+
+// ============================================
+// Port-Forward Management
+// ============================================
+
+let portForwardProcesses = new Map();
+
+ipcMain.handle('portforward:start', (event, { resourceType, name, namespace, localPort, remotePort }) => {
+  try {
+    const forwardId = `pf-${resourceType}-${name}-${localPort}-${Date.now()}`;
+    const cmd = `kubectl port-forward ${resourceType}/${name} -n ${namespace} ${localPort}:${remotePort}`;
+
+    const child = exec(`wsl bash -lc "${cmd.replace(/"/g, '\\"')}"`);
+
+    portForwardProcesses.set(forwardId, {
+      process: child,
+      resourceType,
+      name,
+      namespace,
+      localPort,
+      remotePort,
+      startTime: new Date().toISOString()
+    });
+
+    child.stdout.on('data', (data) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('portforward:data', { forwardId, data });
+      }
+    });
+
+    child.stderr.on('data', (data) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('portforward:error', { forwardId, data });
+      }
+    });
+
+    child.on('exit', (code) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('portforward:exit', { forwardId, code });
+      }
+      portForwardProcesses.delete(forwardId);
+    });
+
+    return { success: true, forwardId };
+  } catch (error) {
+    console.error('[portforward:start] Error:', error.message);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('portforward:stop', (event, { forwardId }) => {
+  const forward = portForwardProcesses.get(forwardId);
+  if (forward) {
+    forward.process.kill();
+    portForwardProcesses.delete(forwardId);
+    return { success: true };
+  }
+  return { success: false, error: 'Port forward not found' };
+});
+
+ipcMain.handle('portforward:list', () => {
+  const forwards = [];
+  portForwardProcesses.forEach((value, key) => {
+    forwards.push({
+      forwardId: key,
+      resourceType: value.resourceType,
+      name: value.name,
+      namespace: value.namespace,
+      localPort: value.localPort,
+      remotePort: value.remotePort,
+      startTime: value.startTime
+    });
+  });
+  return { success: true, data: forwards };
+});
+
+ipcMain.handle('portforward:stopAll', () => {
+  portForwardProcesses.forEach((value) => {
+    value.process.kill();
+  });
+  portForwardProcesses.clear();
+  return { success: true };
+});
+
+// Cleanup port-forwards on app quit
+app.on('before-quit', () => {
+  portForwardProcesses.forEach((value) => {
+    value.process.kill();
+  });
+  portForwardProcesses.clear();
+});

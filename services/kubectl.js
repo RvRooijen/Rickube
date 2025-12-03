@@ -337,6 +337,173 @@ class KubectlService {
     }
     throw new Error(result.error);
   }
+
+  // ============================================
+  // Networking: Services
+  // ============================================
+
+  async getServices(namespace) {
+    const result = await this.api.exec(['get', 'services', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async describeService(name, namespace) {
+    const result = await this.api.exec(['describe', 'service', name, '-n', namespace]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Networking: Ingresses
+  // ============================================
+
+  async getIngresses(namespace) {
+    const result = await this.api.exec(['get', 'ingress', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Networking: Endpoints
+  // ============================================
+
+  async getEndpoints(namespace) {
+    const result = await this.api.exec(['get', 'endpoints', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Config: ConfigMaps
+  // ============================================
+
+  async getConfigMaps(namespace) {
+    const result = await this.api.exec(['get', 'configmaps', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async getConfigMapData(name, namespace) {
+    const result = await this.api.exec(['get', 'configmap', name, '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Config: Secrets
+  // ============================================
+
+  async getSecrets(namespace) {
+    const result = await this.api.exec(['get', 'secrets', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async getSecretData(name, namespace) {
+    const result = await this.api.exec(['get', 'secret', name, '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Storage: PersistentVolumeClaims
+  // ============================================
+
+  async getPVCs(namespace) {
+    const result = await this.api.exec(['get', 'pvc', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async describePVC(name, namespace) {
+    const result = await this.api.exec(['describe', 'pvc', name, '-n', namespace]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Storage: PersistentVolumes (cluster-wide)
+  // ============================================
+
+  async getPVs() {
+    const result = await this.api.exec(['get', 'pv', '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Cluster: Nodes
+  // ============================================
+
+  async getNodes() {
+    const result = await this.api.exec(['get', 'nodes', '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async describeNode(name) {
+    const result = await this.api.exec(['describe', 'node', name]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  async getNodeMetrics() {
+    const result = await this.api.exec(['top', 'nodes', '--no-headers']);
+    if (result.success) {
+      return this.parseNodeMetrics(result.data);
+    }
+    // Return empty array if metrics-server is not available
+    if (result.error && result.error.includes('Metrics API not available')) {
+      return [];
+    }
+    throw new Error(result.error);
+  }
+
+  parseNodeMetrics(output) {
+    if (!output || !output.trim()) return [];
+
+    const lines = output.trim().split('\n');
+    return lines.map(line => {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 5) {
+        return {
+          name: parts[0],
+          cpuCores: parts[1],
+          cpuPercent: parts[2],
+          memoryBytes: parts[3],
+          memoryPercent: parts[4],
+        };
+      }
+      return null;
+    }).filter(m => m !== null);
+  }
 }
 
 export default KubectlService;

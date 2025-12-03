@@ -11,6 +11,11 @@ import MetricsComponent from './components/metrics.js';
 import FileBrowser from './components/fileBrowser.js';
 import WorkloadsComponent from './components/workloads.js';
 import EventsComponent from './components/events.js';
+import NetworkingComponent from './components/networking.js';
+import ConfigComponent from './components/config.js';
+import StorageComponent from './components/storage.js';
+import ClusterComponent from './components/cluster.js';
+import PortForwardManager from './components/portForwardManager.js';
 
 class RickubeApp {
   constructor() {
@@ -33,6 +38,16 @@ class RickubeApp {
       onTriggerJob: this.onTriggerCronJob.bind(this),
     });
     this.events = new EventsComponent('events-list', this.kubectlService);
+    this.networking = new NetworkingComponent('networking-container', this.kubectlService, {
+      onPortForward: this.onPortForward.bind(this),
+    });
+    this.config = new ConfigComponent('config-container', this.kubectlService, {
+      onViewConfigMap: this.onViewConfigMap.bind(this),
+      onViewSecret: this.onViewSecret.bind(this),
+    });
+    this.storage = new StorageComponent('storage-container', this.kubectlService);
+    this.cluster = new ClusterComponent('cluster-container', this.kubectlService);
+    this.portForwardManager = new PortForwardManager('port-forwards-list');
 
     // State
     this.currentNamespace = null;
@@ -200,6 +215,18 @@ class RickubeApp {
       } else {
         this.showError('Selecteer eerst een pod');
       }
+    });
+
+    // Port forwards panel controls
+    document.getElementById('stop-all-forwards').addEventListener('click', () => {
+      this.portForwardManager.stopAll();
+    });
+
+    document.getElementById('port-forwards-toggle').addEventListener('click', () => {
+      const panel = document.getElementById('port-forwards-panel');
+      panel.classList.toggle('collapsed');
+      const toggleBtn = document.getElementById('port-forwards-toggle');
+      toggleBtn.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
     });
   }
 
@@ -571,17 +598,39 @@ class RickubeApp {
       }
     });
 
+    // Stop all view-specific polling first
+    this.pollerService.stop('workloads');
+    this.pollerService.stop('networking');
+    this.pollerService.stop('config');
+    this.pollerService.stop('storage');
+    this.pollerService.stop('cluster');
+
     // Handle view-specific actions
     if (viewName === 'workloads' && this.currentNamespace) {
       this.loadWorkloads(this.currentNamespace);
-      // Start workloads polling
-      this.pollerService.stop('workloads');
       this.pollerService.start('workloads', async () => {
         await this.loadWorkloads(this.currentNamespace);
       }, 5000);
-    } else if (viewName === 'pods') {
-      // Stop workloads polling when switching to pods
-      this.pollerService.stop('workloads');
+    } else if (viewName === 'networking' && this.currentNamespace) {
+      this.loadNetworking(this.currentNamespace);
+      this.pollerService.start('networking', async () => {
+        await this.loadNetworking(this.currentNamespace);
+      }, 10000);
+    } else if (viewName === 'config' && this.currentNamespace) {
+      this.loadConfig(this.currentNamespace);
+      this.pollerService.start('config', async () => {
+        await this.loadConfig(this.currentNamespace);
+      }, 10000);
+    } else if (viewName === 'storage') {
+      this.loadStorage(this.currentNamespace);
+      this.pollerService.start('storage', async () => {
+        await this.loadStorage(this.currentNamespace);
+      }, 30000);
+    } else if (viewName === 'cluster') {
+      this.loadCluster();
+      this.pollerService.start('cluster', async () => {
+        await this.loadCluster();
+      }, 30000);
     }
   }
 
@@ -590,6 +639,38 @@ class RickubeApp {
       await this.workloads.loadAll(namespace);
     } catch (error) {
       console.error('[app] Failed to load workloads:', error);
+    }
+  }
+
+  async loadNetworking(namespace) {
+    try {
+      await this.networking.loadAll(namespace);
+    } catch (error) {
+      console.error('[app] Failed to load networking:', error);
+    }
+  }
+
+  async loadConfig(namespace) {
+    try {
+      await this.config.loadAll(namespace);
+    } catch (error) {
+      console.error('[app] Failed to load config:', error);
+    }
+  }
+
+  async loadStorage(namespace) {
+    try {
+      await this.storage.loadAll(namespace);
+    } catch (error) {
+      console.error('[app] Failed to load storage:', error);
+    }
+  }
+
+  async loadCluster() {
+    try {
+      await this.cluster.loadAll();
+    } catch (error) {
+      console.error('[app] Failed to load cluster:', error);
     }
   }
 
@@ -727,6 +808,176 @@ class RickubeApp {
         resolve(false);
       };
     });
+  }
+
+  // Port-forward handler
+  async onPortForward(resourceType, name, defaultPort) {
+    const modal = document.getElementById('port-forward-modal');
+    const resourceNameEl = document.getElementById('pf-resource-name');
+    const localPortInput = document.getElementById('pf-local-port');
+    const remotePortInput = document.getElementById('pf-remote-port');
+    const startBtn = document.getElementById('pf-start');
+    const cancelBtn = document.getElementById('pf-cancel');
+    const closeBtn = document.getElementById('pf-modal-close');
+
+    resourceNameEl.textContent = `${resourceType}/${name}`;
+    localPortInput.value = defaultPort;
+    remotePortInput.value = defaultPort;
+    modal.classList.add('show');
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        modal.classList.remove('show');
+        startBtn.onclick = null;
+        cancelBtn.onclick = null;
+        closeBtn.onclick = null;
+      };
+
+      startBtn.onclick = async () => {
+        const localPort = parseInt(localPortInput.value, 10);
+        const remotePort = parseInt(remotePortInput.value, 10);
+        cleanup();
+
+        try {
+          const result = await this.portForwardManager.startForward(
+            resourceType,
+            name,
+            this.currentNamespace,
+            localPort,
+            remotePort
+          );
+          if (result.success) {
+            this.showSuccess(`Port forward started: localhost:${localPort}`);
+          } else {
+            this.showError(`Failed to start port forward: ${result.error}`);
+          }
+        } catch (error) {
+          this.showError(`Failed to start port forward: ${error.message}`);
+        }
+        resolve(true);
+      };
+
+      cancelBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      closeBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+    });
+  }
+
+  // ConfigMap view handler
+  onViewConfigMap(name, data) {
+    const modal = document.getElementById('configmap-modal');
+    const nameEl = document.getElementById('configmap-modal-name');
+    const dataList = document.getElementById('configmap-data-list');
+    const closeBtn = document.getElementById('configmap-modal-close');
+
+    nameEl.textContent = name;
+    dataList.innerHTML = '';
+
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
+      dataList.innerHTML = '<div class="config-data-empty">No data</div>';
+    } else {
+      keys.forEach(key => {
+        const item = document.createElement('div');
+        item.className = 'config-data-item';
+        item.innerHTML = `
+          <div class="config-data-key">${this.escapeHtml(key)}</div>
+          <pre class="config-data-value"><code>${this.escapeHtml(data[key])}</code></pre>
+        `;
+        dataList.appendChild(item);
+      });
+    }
+
+    modal.classList.add('show');
+
+    closeBtn.onclick = () => {
+      modal.classList.remove('show');
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+      }
+    };
+  }
+
+  // Secret view handler
+  onViewSecret(name, data, type) {
+    const modal = document.getElementById('secret-modal');
+    const nameEl = document.getElementById('secret-modal-name');
+    const dataList = document.getElementById('secret-data-list');
+    const closeBtn = document.getElementById('secret-modal-close');
+
+    nameEl.textContent = `${name} (${type})`;
+    dataList.innerHTML = '';
+
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
+      dataList.innerHTML = '<div class="secret-data-empty">No data</div>';
+    } else {
+      keys.forEach(key => {
+        const item = document.createElement('div');
+        item.className = 'secret-data-item';
+        item.innerHTML = `
+          <div class="secret-data-key">${this.escapeHtml(key)}</div>
+          <div class="secret-data-value">
+            <code class="masked">••••••••••••••••</code>
+            <button class="btn btn-small reveal-btn">Reveal</button>
+          </div>
+        `;
+
+        const revealBtn = item.querySelector('.reveal-btn');
+        const codeEl = item.querySelector('code');
+        let isRevealed = false;
+
+        revealBtn.onclick = () => {
+          if (!isRevealed) {
+            try {
+              const decoded = atob(data[key]);
+              codeEl.textContent = decoded;
+              codeEl.classList.remove('masked');
+              revealBtn.textContent = 'Hide';
+              isRevealed = true;
+            } catch (e) {
+              codeEl.textContent = '[binary data]';
+              codeEl.classList.remove('masked');
+              revealBtn.disabled = true;
+            }
+          } else {
+            codeEl.textContent = '••••••••••••••••';
+            codeEl.classList.add('masked');
+            revealBtn.textContent = 'Reveal';
+            isRevealed = false;
+          }
+        };
+
+        dataList.appendChild(item);
+      });
+    }
+
+    modal.classList.add('show');
+
+    closeBtn.onclick = () => {
+      modal.classList.remove('show');
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+      }
+    };
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 }
 

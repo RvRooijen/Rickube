@@ -41,4 +41,21 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.on('logs:exit', (event, data) => callback(data));
     },
   },
+
+  // Port-forward operations
+  portforward: {
+    start: (options) => ipcRenderer.invoke('portforward:start', options),
+    stop: (data) => ipcRenderer.invoke('portforward:stop', data),
+    list: () => ipcRenderer.invoke('portforward:list'),
+    stopAll: () => ipcRenderer.invoke('portforward:stopAll'),
+    onData: (callback) => {
+      ipcRenderer.on('portforward:data', (event, data) => callback(data));
+    },
+    onError: (callback) => {
+      ipcRenderer.on('portforward:error', (event, data) => callback(data));
+    },
+    onExit: (callback) => {
+      ipcRenderer.on('portforward:exit', (event, data) => callback(data));
+    },
+  },
 });

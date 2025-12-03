@@ -67,6 +67,10 @@
         <div class="main-view-tabs">
           <button class="main-view-tab active" data-view="pods">Pods</button>
           <button class="main-view-tab" data-view="workloads">Workloads</button>
+          <button class="main-view-tab" data-view="networking">Networking</button>
+          <button class="main-view-tab" data-view="config">Config</button>
+          <button class="main-view-tab" data-view="storage">Storage</button>
+          <button class="main-view-tab" data-view="cluster">Cluster</button>
           <div class="main-view-info">
             <span id="namespace-name">Select a namespace</span>
             <span class="pod-count" id="pod-count"></span>
@@ -87,6 +91,42 @@
           <div class="workloads-container" id="workloads-container">
             <div class="empty-state">
               <p>Select a namespace to view workloads</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Networking View -->
+        <div class="main-view-content" id="networking-view">
+          <div class="networking-container" id="networking-container">
+            <div class="empty-state">
+              <p>Select a namespace to view networking resources</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Config View -->
+        <div class="main-view-content" id="config-view">
+          <div class="config-container" id="config-container">
+            <div class="empty-state">
+              <p>Select a namespace to view config resources</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage View -->
+        <div class="main-view-content" id="storage-view">
+          <div class="storage-container" id="storage-container">
+            <div class="empty-state">
+              <p>Select a namespace to view storage resources</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cluster View -->
+        <div class="main-view-content" id="cluster-view">
+          <div class="cluster-container" id="cluster-container">
+            <div class="empty-state">
+              <p>Loading cluster info...</p>
             </div>
           </div>
         </div>
@@ -226,6 +266,75 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
         <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Port Forward Modal -->
+  <div class="modal-overlay" id="port-forward-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Port Forward: <span id="pf-resource-name"></span></h3>
+        <button class="modal-close" id="pf-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="pf-local-port">Local Port:</label>
+          <input type="number" id="pf-local-port" min="1" max="65535" value="8080">
+        </div>
+        <div class="form-group">
+          <label for="pf-remote-port">Remote Port:</label>
+          <input type="number" id="pf-remote-port" min="1" max="65535" value="80">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pf-cancel">Cancel</button>
+        <button class="btn" id="pf-start">Start Forward</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ConfigMap View Modal -->
+  <div class="modal-overlay" id="configmap-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>ConfigMap: <span id="configmap-modal-name"></span></h3>
+        <button class="modal-close" id="configmap-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="config-data-list" id="configmap-data-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secret View Modal -->
+  <div class="modal-overlay" id="secret-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>Secret: <span id="secret-modal-name"></span></h3>
+        <button class="modal-close" id="secret-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="secret-warning">
+          <span class="warning-icon">!</span>
+          These values contain sensitive data. Be careful when revealing.
+        </div>
+        <div class="secret-data-list" id="secret-data-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Port Forwards Panel (floating) -->
+  <div class="port-forwards-panel" id="port-forwards-panel">
+    <div class="port-forwards-header">
+      <span class="port-forwards-title">Port Forwards</span>
+      <span class="port-forwards-count" id="port-forwards-count">0</span>
+      <button class="btn btn-small btn-danger" id="stop-all-forwards">Stop All</button>
+      <button class="port-forwards-toggle" id="port-forwards-toggle">▼</button>
+    </div>
+    <div class="port-forwards-content" id="port-forwards-content">
+      <div class="port-forwards-list" id="port-forwards-list">
+        <div class="port-forwards-empty">No active port forwards</div>
       </div>
     </div>
   </div>
