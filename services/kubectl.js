@@ -218,6 +218,50 @@ class KubectlService {
     throw new Error(result.error);
   }
 
+  async getRolloutStatus(resourceType, name, namespace) {
+    // Get current deployment/statefulset status
+    const result = await this.api.exec(['get', resourceType, name, '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      const resource = JSON.parse(result.data);
+      const status = resource.status || {};
+      const spec = resource.spec || {};
+
+      return {
+        replicas: spec.replicas || 0,
+        readyReplicas: status.readyReplicas || 0,
+        updatedReplicas: status.updatedReplicas || 0,
+        availableReplicas: status.availableReplicas || 0,
+        unavailableReplicas: status.unavailableReplicas || 0,
+        observedGeneration: status.observedGeneration,
+        generation: resource.metadata?.generation,
+        conditions: status.conditions || [],
+      };
+    }
+    throw new Error(result.error);
+  }
+
+  async getResourceEvents(resourceType, name, namespace) {
+    // Get events related to a specific resource
+    const fieldSelector = `involvedObject.name=${name},involvedObject.kind=${this.getKindFromType(resourceType)}`;
+    const result = await this.api.exec(['get', 'events', '-n', namespace, '--field-selector', fieldSelector, '--sort-by=.lastTimestamp', '-o', 'json']);
+    if (result.success) {
+      const data = JSON.parse(result.data);
+      return data.items || [];
+    }
+    return [];
+  }
+
+  getKindFromType(resourceType) {
+    const kindMap = {
+      'deployment': 'Deployment',
+      'statefulset': 'StatefulSet',
+      'daemonset': 'DaemonSet',
+      'replicaset': 'ReplicaSet',
+      'pod': 'Pod',
+    };
+    return kindMap[resourceType] || resourceType;
+  }
+
   async rollbackDeployment(name, namespace, revision = null) {
     const args = ['rollout', 'undo', `deployment/${name}`, '-n', namespace];
     if (revision) {

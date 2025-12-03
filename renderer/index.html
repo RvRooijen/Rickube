@@ -324,6 +324,44 @@
     </div>
   </div>
 
+  <!-- Operation Progress Modal -->
+  <div class="modal-overlay" id="operation-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3 id="operation-title">Operation in Progress</h3>
+        <button class="modal-close" id="operation-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="operation-command" id="operation-command"></div>
+        <div class="operation-status">
+          <div class="operation-status-header">
+            <span class="operation-status-label">Status:</span>
+            <span class="operation-status-value" id="operation-status-value">Starting...</span>
+          </div>
+          <div class="operation-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="operation-progress-fill"></div>
+            </div>
+            <span class="progress-text" id="operation-progress-text">0/0</span>
+          </div>
+        </div>
+        <div class="operation-details" id="operation-details">
+          <div class="operation-section">
+            <h4>Rollout Status</h4>
+            <div class="operation-stats" id="operation-stats"></div>
+          </div>
+          <div class="operation-section">
+            <h4>Recent Events</h4>
+            <div class="operation-events" id="operation-events"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="operation-close">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Port Forwards Panel (floating) -->
   <div class="port-forwards-panel" id="port-forwards-panel">
     <div class="port-forwards-header">

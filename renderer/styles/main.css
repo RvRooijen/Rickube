@@ -2151,3 +2151,188 @@ body {
 .workload-card:hover {
   border-color: var(--accent-blue);
 }
+
+/* ============================================
+   Operation Progress Modal
+   ============================================ */
+
+.operation-command {
+  background-color: var(--bg-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  color: var(--accent-blue);
+  margin-bottom: 16px;
+}
+
+.operation-status {
+  margin-bottom: 16px;
+}
+
+.operation-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.operation-status-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.operation-status-value {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.operation-status-value.status-success {
+  color: var(--status-green);
+}
+
+.operation-status-value.status-in-progress {
+  color: var(--accent-blue);
+}
+
+.operation-status-value.status-error {
+  color: var(--status-red);
+}
+
+.operation-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--accent-blue);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.progress-fill.complete {
+  background-color: var(--status-green);
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 50px;
+  text-align: right;
+}
+
+.operation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.operation-section h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.operation-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.operation-stat {
+  background-color: var(--bg-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.operation-stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.operation-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.operation-events {
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.operation-event {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.operation-event:last-child {
+  border-bottom: none;
+}
+
+.operation-event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.operation-event-type {
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.operation-event-type.Normal {
+  background-color: rgba(46, 160, 67, 0.2);
+  color: var(--status-green);
+}
+
+.operation-event-type.Warning {
+  background-color: rgba(210, 153, 34, 0.2);
+  color: var(--status-yellow);
+}
+
+.operation-event-time {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.operation-event-message {
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.operation-event-reason {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.operation-events-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}

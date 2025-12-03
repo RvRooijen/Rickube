@@ -739,12 +739,150 @@ class RickubeApp {
     if (confirmed) {
       try {
         await this.kubectlService.restartResource(resourceType, name, this.currentNamespace);
-        this.showSuccess(`${name} restart initiated`);
-        await this.loadWorkloads(this.currentNamespace);
+        // Show operation modal with live status updates
+        this.showOperationModal(resourceType, name, 'restart');
       } catch (error) {
         this.showError(`Failed to restart: ${error.message}`);
       }
     }
+  }
+
+  showOperationModal(resourceType, name, operation) {
+    const modal = document.getElementById('operation-modal');
+    const title = document.getElementById('operation-title');
+    const command = document.getElementById('operation-command');
+    const statusValue = document.getElementById('operation-status-value');
+    const progressFill = document.getElementById('operation-progress-fill');
+    const progressText = document.getElementById('operation-progress-text');
+    const statsContainer = document.getElementById('operation-stats');
+    const eventsContainer = document.getElementById('operation-events');
+    const closeBtn = document.getElementById('operation-close');
+    const modalCloseBtn = document.getElementById('operation-modal-close');
+
+    // Set initial content
+    const opName = operation.charAt(0).toUpperCase() + operation.slice(1);
+    title.textContent = `${opName}: ${name}`;
+    command.textContent = `kubectl rollout ${operation} ${resourceType}/${name} -n ${this.currentNamespace}`;
+    statusValue.textContent = 'Starting...';
+    statusValue.className = 'operation-status-value status-in-progress';
+    progressFill.style.width = '0%';
+    progressFill.classList.remove('complete');
+    progressText.textContent = '0/0';
+    statsContainer.innerHTML = '';
+    eventsContainer.innerHTML = '<div class="operation-events-empty">Loading events...</div>';
+
+    modal.classList.add('active');
+
+    // Polling interval reference
+    let pollInterval = null;
+    let isComplete = false;
+
+    const closeModal = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      modal.classList.remove('active');
+      this.loadWorkloads(this.currentNamespace);
+    };
+
+    closeBtn.onclick = closeModal;
+    modalCloseBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+      if (e.target === modal) closeModal();
+    };
+
+    // Start polling for status updates
+    const updateStatus = async () => {
+      try {
+        // Get rollout status
+        const status = await this.kubectlService.getRolloutStatus(resourceType, name, this.currentNamespace);
+
+        // Update stats
+        statsContainer.innerHTML = `
+          <div class="operation-stat">
+            <span class="operation-stat-label">Desired</span>
+            <span class="operation-stat-value">${status.replicas}</span>
+          </div>
+          <div class="operation-stat">
+            <span class="operation-stat-label">Updated</span>
+            <span class="operation-stat-value">${status.updatedReplicas}</span>
+          </div>
+          <div class="operation-stat">
+            <span class="operation-stat-label">Ready</span>
+            <span class="operation-stat-value">${status.readyReplicas}</span>
+          </div>
+          <div class="operation-stat">
+            <span class="operation-stat-label">Available</span>
+            <span class="operation-stat-value">${status.availableReplicas}</span>
+          </div>
+        `;
+
+        // Update progress
+        const progress = status.replicas > 0
+          ? Math.round((status.readyReplicas / status.replicas) * 100)
+          : 0;
+        progressFill.style.width = `${progress}%`;
+        progressText.textContent = `${status.readyReplicas}/${status.replicas}`;
+
+        // Check if complete
+        if (status.readyReplicas === status.replicas &&
+            status.updatedReplicas === status.replicas &&
+            status.availableReplicas === status.replicas &&
+            status.replicas > 0) {
+          if (!isComplete) {
+            isComplete = true;
+            statusValue.textContent = 'Complete';
+            statusValue.className = 'operation-status-value status-success';
+            progressFill.classList.add('complete');
+          }
+        } else {
+          statusValue.textContent = 'Rolling out...';
+          statusValue.className = 'operation-status-value status-in-progress';
+        }
+
+        // Get recent events
+        const events = await this.kubectlService.getResourceEvents(resourceType, name, this.currentNamespace);
+        if (events && events.length > 0) {
+          const recentEvents = events.slice(-10).reverse();
+          eventsContainer.innerHTML = recentEvents.map(event => `
+            <div class="operation-event">
+              <div class="operation-event-header">
+                <span class="operation-event-type ${event.type}">${event.type}</span>
+                <span class="operation-event-time">${this.formatEventTime(event.lastTimestamp || event.eventTime)}</span>
+              </div>
+              <div class="operation-event-message">
+                <span class="operation-event-reason">${event.reason}:</span> ${this.escapeHtml(event.message || '')}
+              </div>
+            </div>
+          `).join('');
+        } else {
+          eventsContainer.innerHTML = '<div class="operation-events-empty">No events found</div>';
+        }
+
+      } catch (error) {
+        console.error('Failed to update operation status:', error);
+      }
+    };
+
+    // Initial update
+    updateStatus();
+
+    // Poll every 2 seconds
+    pollInterval = setInterval(updateStatus, 2000);
+  }
+
+  formatEventTime(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+
+    if (diffSec < 60) return `${diffSec}s ago`;
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return date.toLocaleTimeString();
   }
 
   async onWorkloadRollback(name) {
@@ -756,8 +894,8 @@ class RickubeApp {
     if (confirmed) {
       try {
         await this.kubectlService.rollbackDeployment(name, this.currentNamespace);
-        this.showSuccess(`${name} rollback initiated`);
-        await this.loadWorkloads(this.currentNamespace);
+        // Show operation modal with live status updates
+        this.showOperationModal('deployment', name, 'undo');
       } catch (error) {
         this.showError(`Failed to rollback: ${error.message}`);
       }
