@@ -118,7 +118,7 @@ class ConfigComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="view">View Data</button>
+        <button class="workload-action-btn" data-action="view" title="kubectl get configmap ${name} -o yaml">View Data</button>
       </div>
     `;
 
@@ -172,7 +172,7 @@ class ConfigComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="view">View Data</button>
+        <button class="workload-action-btn" data-action="view" title="kubectl get secret ${name} -o yaml (base64 decoded)">View Data</button>
       </div>
     `;
 

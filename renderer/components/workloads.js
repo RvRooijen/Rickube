@@ -146,9 +146,9 @@ class WorkloadsComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="scale">Scale</button>
-        <button class="workload-action-btn" data-action="restart">Restart</button>
-        <button class="workload-action-btn" data-action="rollback">Rollback</button>
+        <button class="workload-action-btn" data-action="scale" title="kubectl scale deployment/${name} --replicas=N">Scale</button>
+        <button class="workload-action-btn" data-action="restart" title="kubectl rollout restart deployment/${name}">Restart</button>
+        <button class="workload-action-btn" data-action="rollback" title="kubectl rollout undo deployment/${name}">Rollback</button>
       </div>
     `;
 
@@ -217,8 +217,8 @@ class WorkloadsComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="scale">Scale</button>
-        <button class="workload-action-btn" data-action="restart">Restart</button>
+        <button class="workload-action-btn" data-action="scale" title="kubectl scale statefulset/${name} --replicas=N">Scale</button>
+        <button class="workload-action-btn" data-action="restart" title="kubectl rollout restart statefulset/${name}">Restart</button>
       </div>
     `;
 
@@ -279,7 +279,7 @@ class WorkloadsComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="restart">Restart</button>
+        <button class="workload-action-btn" data-action="restart" title="kubectl rollout restart daemonset/${name}">Restart</button>
       </div>
     `;
 
@@ -392,7 +392,7 @@ class WorkloadsComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="trigger">Trigger Now</button>
+        <button class="workload-action-btn" data-action="trigger" title="kubectl create job --from=cronjob/${name}">Trigger Now</button>
       </div>
     `;
 

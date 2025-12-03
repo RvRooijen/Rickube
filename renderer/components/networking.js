@@ -136,7 +136,7 @@ class NetworkingComponent {
         </div>
       </div>
       <div class="workload-card-actions">
-        <button class="workload-action-btn" data-action="portforward">Port Forward</button>
+        <button class="workload-action-btn" data-action="portforward" title="kubectl port-forward svc/${name} LOCAL:REMOTE">Port Forward</button>
       </div>
     `;
 
