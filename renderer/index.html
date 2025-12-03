@@ -270,6 +270,27 @@
     </div>
   </div>
 
+  <!-- Rollback Modal -->
+  <div class="modal-overlay" id="rollback-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>Rollback: <span id="rollback-deployment-name"></span></h3>
+        <button class="modal-close" id="rollback-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="rollback-info">Select a revision to rollback to:</p>
+        <div class="rollback-current" id="rollback-current"></div>
+        <div class="rollback-history" id="rollback-history">
+          <div class="loading-spinner">Loading history...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="rollback-cancel">Cancel</button>
+        <button class="btn btn-danger" id="rollback-confirm" disabled>Rollback</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Port Forward Modal -->
   <div class="modal-overlay" id="port-forward-modal">
     <div class="modal">

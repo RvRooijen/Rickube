@@ -912,20 +912,125 @@ class RickubeApp {
   }
 
   async onWorkloadRollback(name) {
-    const confirmed = await this.showConfirmModal(
-      'Rollback Deployment',
-      `Are you sure you want to rollback ${name} to the previous revision?`
-    );
+    // Show rollback modal with revision history
+    const selectedRevision = await this.showRollbackModal(name);
 
-    if (confirmed) {
+    if (selectedRevision !== null) {
       try {
-        await this.kubectlService.rollbackDeployment(name, this.currentNamespace);
+        await this.kubectlService.rollbackDeployment(name, this.currentNamespace, selectedRevision);
         // Show operation modal with live status updates
         this.showOperationModal('deployment', name, 'undo');
       } catch (error) {
         this.showError(`Failed to rollback: ${error.message}`);
       }
     }
+  }
+
+  async showRollbackModal(name) {
+    const modal = document.getElementById('rollback-modal');
+    const deploymentName = document.getElementById('rollback-deployment-name');
+    const currentContainer = document.getElementById('rollback-current');
+    const historyContainer = document.getElementById('rollback-history');
+    const confirmBtn = document.getElementById('rollback-confirm');
+    const cancelBtn = document.getElementById('rollback-cancel');
+    const closeBtn = document.getElementById('rollback-modal-close');
+
+    deploymentName.textContent = name;
+    currentContainer.innerHTML = '<div class="loading-spinner">Loading current revision...</div>';
+    historyContainer.innerHTML = '<div class="loading-spinner">Loading history...</div>';
+    confirmBtn.disabled = true;
+
+    modal.classList.add('show');
+
+    let selectedRevision = null;
+
+    return new Promise(async (resolve) => {
+      const closeModal = (result) => {
+        modal.classList.remove('show');
+        resolve(result);
+      };
+
+      cancelBtn.onclick = () => closeModal(null);
+      closeBtn.onclick = () => closeModal(null);
+      modal.onclick = (e) => {
+        if (e.target === modal) closeModal(null);
+      };
+
+      confirmBtn.onclick = () => closeModal(selectedRevision);
+
+      // Load rollout history
+      try {
+        const history = await this.kubectlService.getRolloutHistoryDetailed(name, this.currentNamespace);
+
+        if (!history || history.length === 0) {
+          historyContainer.innerHTML = '<div class="operation-events-empty">No revision history found</div>';
+          currentContainer.innerHTML = '';
+          return;
+        }
+
+        // Sort by revision descending (newest first)
+        history.sort((a, b) => parseInt(b.revision) - parseInt(a.revision));
+
+        // Current revision is the highest number
+        const currentRevision = history[0];
+
+        currentContainer.innerHTML = `
+          <div class="rollback-current-label">Current Revision #${currentRevision.revision}</div>
+          <div class="rollback-current-image">${currentRevision.image || 'Unknown image'}</div>
+        `;
+
+        // Show all revisions except the current one as options
+        if (history.length <= 1) {
+          historyContainer.innerHTML = '<div class="operation-events-empty">No previous revisions available to rollback to</div>';
+          return;
+        }
+
+        historyContainer.innerHTML = history.map((rev, index) => {
+          const isCurrent = index === 0;
+          const isPrevious = index === 1;
+          let badge = '';
+
+          if (isCurrent) {
+            badge = '<span class="rollback-revision-badge current">Current</span>';
+          } else if (isPrevious) {
+            badge = '<span class="rollback-revision-badge previous">Previous</span>';
+          }
+
+          return `
+            <div class="rollback-revision ${isCurrent ? 'current' : ''}"
+                 data-revision="${rev.revision}"
+                 ${isCurrent ? '' : 'tabindex="0"'}>
+              <div class="rollback-revision-header">
+                <span class="rollback-revision-number">Revision #${rev.revision}</span>
+                ${badge}
+              </div>
+              <div class="rollback-revision-image">${rev.image || 'Unknown image'}</div>
+              ${rev.changeReason && rev.changeReason !== '<none>'
+                ? `<div class="rollback-revision-reason">${this.escapeHtml(rev.changeReason)}</div>`
+                : ''}
+            </div>
+          `;
+        }).join('');
+
+        // Add click handlers to revision items
+        const revisionElements = historyContainer.querySelectorAll('.rollback-revision:not(.current)');
+        revisionElements.forEach(el => {
+          el.addEventListener('click', () => {
+            // Remove selected from all
+            historyContainer.querySelectorAll('.rollback-revision').forEach(r => r.classList.remove('selected'));
+            // Add selected to clicked
+            el.classList.add('selected');
+            selectedRevision = el.dataset.revision;
+            confirmBtn.disabled = false;
+          });
+        });
+
+      } catch (error) {
+        console.error('Failed to load rollout history:', error);
+        historyContainer.innerHTML = `<div class="operation-events-empty">Failed to load history: ${error.message}</div>`;
+        currentContainer.innerHTML = '';
+      }
+    });
   }
 
   async onTriggerCronJob(name) {

@@ -282,6 +282,58 @@ class KubectlService {
     throw new Error(result.error);
   }
 
+  async getRolloutHistoryDetailed(name, namespace) {
+    // Get basic history first
+    const basicHistory = await this.getRolloutHistory(name, namespace);
+
+    // Get detailed info for each revision (image, etc.)
+    const detailedHistory = await Promise.all(
+      basicHistory.map(async (rev) => {
+        try {
+          const result = await this.api.exec([
+            'rollout', 'history', `deployment/${name}`,
+            `--revision=${rev.revision}`,
+            '-n', namespace
+          ]);
+          if (result.success) {
+            const details = this.parseRevisionDetails(result.data);
+            return { ...rev, ...details };
+          }
+        } catch (e) {
+          // Ignore errors for individual revisions
+        }
+        return rev;
+      })
+    );
+
+    return detailedHistory;
+  }
+
+  parseRevisionDetails(output) {
+    const details = {
+      image: null,
+      changeReason: null,
+    };
+
+    if (!output) return details;
+
+    const lines = output.split('\n');
+    for (const line of lines) {
+      // Look for Image line
+      const imageMatch = line.match(/Image:\s*(.+)/i);
+      if (imageMatch) {
+        details.image = imageMatch[1].trim();
+      }
+      // Look for change-cause annotation
+      const causeMatch = line.match(/change-cause:\s*(.+)/i);
+      if (causeMatch) {
+        details.changeReason = causeMatch[1].trim();
+      }
+    }
+
+    return details;
+  }
+
   parseRolloutHistory(output) {
     if (!output || !output.trim()) return [];
 
