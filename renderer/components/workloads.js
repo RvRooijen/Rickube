@@ -174,6 +174,13 @@ class WorkloadsComponent {
       }
     });
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('deployment', name, deployment);
+      }
+    });
+
     return card;
   }
 
@@ -229,6 +236,13 @@ class WorkloadsComponent {
       }
     });
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('statefulset', name, statefulSet);
+      }
+    });
+
     return card;
   }
 
@@ -273,6 +287,13 @@ class WorkloadsComponent {
       e.stopPropagation();
       if (this.callbacks.onRestart) {
         this.callbacks.onRestart('daemonset', name);
+      }
+    });
+
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('daemonset', name, daemonSet);
       }
     });
 
@@ -325,6 +346,13 @@ class WorkloadsComponent {
       </div>
     `;
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('job', name, job);
+      }
+    });
+
     return card;
   }
 
@@ -372,6 +400,13 @@ class WorkloadsComponent {
       e.stopPropagation();
       if (this.callbacks.onTriggerJob) {
         this.callbacks.onTriggerJob(name);
+      }
+    });
+
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('cronjob', name, cronJob);
       }
     });
 

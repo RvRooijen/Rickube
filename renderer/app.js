@@ -36,6 +36,7 @@ class RickubeApp {
       onRestart: this.onWorkloadRestart.bind(this),
       onRollback: this.onWorkloadRollback.bind(this),
       onTriggerJob: this.onTriggerCronJob.bind(this),
+      onSelect: this.onResourceSelect.bind(this),
     });
     this.events = new EventsComponent('events-list', this.kubectlService);
     this.networking = new NetworkingComponent('networking-container', this.kubectlService, {
@@ -1092,6 +1093,11 @@ class RickubeApp {
       'pvc': 'pvc',
       'pv': 'pv',
       'node': 'node',
+      'deployment': 'deployment',
+      'statefulset': 'statefulset',
+      'daemonset': 'daemonset',
+      'job': 'job',
+      'cronjob': 'cronjob',
     };
 
     const resourceType = typeMap[type] || type;
