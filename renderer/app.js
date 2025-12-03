@@ -792,11 +792,27 @@ class RickubeApp {
       if (e.target === modal) closeModal();
     };
 
+    // Track the initial generation to detect when rollout starts
+    let initialGeneration = null;
+    let rolloutStarted = false;
+
     // Start polling for status updates
     const updateStatus = async () => {
       try {
         // Get rollout status
         const status = await this.kubectlService.getRolloutStatus(resourceType, name, this.currentNamespace);
+
+        // Track initial generation on first call
+        if (initialGeneration === null) {
+          initialGeneration = status.generation;
+        }
+
+        // Detect if rollout has started (generation changed or observedGeneration catching up)
+        if (status.generation > initialGeneration ||
+            status.observedGeneration !== status.generation ||
+            status.unavailableReplicas > 0) {
+          rolloutStarted = true;
+        }
 
         // Update stats
         statsContainer.innerHTML = `
@@ -813,31 +829,41 @@ class RickubeApp {
             <span class="operation-stat-value">${status.readyReplicas}</span>
           </div>
           <div class="operation-stat">
-            <span class="operation-stat-label">Available</span>
-            <span class="operation-stat-value">${status.availableReplicas}</span>
+            <span class="operation-stat-label">Unavailable</span>
+            <span class="operation-stat-value">${status.unavailableReplicas || 0}</span>
           </div>
         `;
 
-        // Update progress
+        // Update progress - only show real progress once rollout has started
         const progress = status.replicas > 0
-          ? Math.round((status.readyReplicas / status.replicas) * 100)
+          ? Math.round((status.updatedReplicas / status.replicas) * 100)
           : 0;
         progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${status.readyReplicas}/${status.replicas}`;
+        progressText.textContent = `${status.updatedReplicas}/${status.replicas} updated`;
 
-        // Check if complete
-        if (status.readyReplicas === status.replicas &&
-            status.updatedReplicas === status.replicas &&
-            status.availableReplicas === status.replicas &&
-            status.replicas > 0) {
+        // Check if complete - must have started first and all conditions met
+        const isRolloutComplete =
+          rolloutStarted &&
+          status.observedGeneration >= status.generation &&
+          status.updatedReplicas === status.replicas &&
+          status.readyReplicas === status.replicas &&
+          status.availableReplicas === status.replicas &&
+          (status.unavailableReplicas || 0) === 0 &&
+          status.replicas > 0;
+
+        if (isRolloutComplete) {
           if (!isComplete) {
             isComplete = true;
             statusValue.textContent = 'Complete';
             statusValue.className = 'operation-status-value status-success';
             progressFill.classList.add('complete');
+            progressText.textContent = `${status.replicas}/${status.replicas} ready`;
           }
+        } else if (!rolloutStarted) {
+          statusValue.textContent = 'Waiting for rollout to start...';
+          statusValue.className = 'operation-status-value status-in-progress';
         } else {
-          statusValue.textContent = 'Rolling out...';
+          statusValue.textContent = `Rolling out... (${status.unavailableReplicas || 0} unavailable)`;
           statusValue.className = 'operation-status-value status-in-progress';
         }
 
