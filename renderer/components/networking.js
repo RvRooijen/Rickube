@@ -148,6 +148,13 @@ class NetworkingComponent {
       }
     });
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('service', name, service);
+      }
+    });
+
     return card;
   }
 
@@ -182,6 +189,13 @@ class NetworkingComponent {
       </div>
     `;
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('ingress', name, ingress);
+      }
+    });
+
     return card;
   }
 
@@ -213,6 +227,13 @@ class NetworkingComponent {
         </div>
       </div>
     `;
+
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('endpoints', name, endpoint);
+      }
+    });
 
     return card;
   }

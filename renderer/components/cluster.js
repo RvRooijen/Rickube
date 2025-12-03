@@ -144,6 +144,13 @@ class ClusterComponent {
       ${this.renderNodeConditions(node)}
     `;
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('node', name, node);
+      }
+    });
+
     return card;
   }
 

@@ -131,6 +131,13 @@ class StorageComponent {
       </div>
     `;
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('pvc', name, pvc);
+      }
+    });
+
     return card;
   }
 
@@ -185,6 +192,13 @@ class StorageComponent {
         </div>
       </div>
     `;
+
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('pv', name, pv);
+      }
+    });
 
     return card;
   }

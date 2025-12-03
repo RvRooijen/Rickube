@@ -129,6 +129,13 @@ class ConfigComponent {
       }
     });
 
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('configmap', name, configMap);
+      }
+    });
+
     return card;
   }
 
@@ -173,6 +180,13 @@ class ConfigComponent {
       e.stopPropagation();
       if (this.callbacks.onViewSecret) {
         this.callbacks.onViewSecret(name, secret.data || {}, type);
+      }
+    });
+
+    // Click on card to show details
+    card.addEventListener('click', () => {
+      if (this.callbacks.onSelect) {
+        this.callbacks.onSelect('secret', name, secret);
       }
     });
 

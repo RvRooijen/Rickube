@@ -40,19 +40,26 @@ class RickubeApp {
     this.events = new EventsComponent('events-list', this.kubectlService);
     this.networking = new NetworkingComponent('networking-container', this.kubectlService, {
       onPortForward: this.onPortForward.bind(this),
+      onSelect: this.onResourceSelect.bind(this),
     });
     this.config = new ConfigComponent('config-container', this.kubectlService, {
       onViewConfigMap: this.onViewConfigMap.bind(this),
       onViewSecret: this.onViewSecret.bind(this),
+      onSelect: this.onResourceSelect.bind(this),
     });
-    this.storage = new StorageComponent('storage-container', this.kubectlService);
-    this.cluster = new ClusterComponent('cluster-container', this.kubectlService);
+    this.storage = new StorageComponent('storage-container', this.kubectlService, {
+      onSelect: this.onResourceSelect.bind(this),
+    });
+    this.cluster = new ClusterComponent('cluster-container', this.kubectlService, {
+      onSelect: this.onResourceSelect.bind(this),
+    });
     this.portForwardManager = new PortForwardManager('port-forwards-list');
 
     // State
     this.currentNamespace = null;
     this.currentPod = null;
     this.currentPodData = null;
+    this.currentResource = null;       // { type, name, data }
     this.selectedTab = 'details';
     this.currentMainView = 'pods';
 
@@ -978,6 +985,132 @@ class RickubeApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // Resource selection handler (for non-pod resources)
+  async onResourceSelect(type, name, data) {
+    this.currentResource = { type, name, data };
+    // Clear pod selection when selecting other resources
+    this.currentPod = null;
+    this.currentPodData = null;
+
+    // Switch to details tab and show resource details
+    this.switchTab('details');
+    await this.updateResourceDetails();
+  }
+
+  async updateResourceDetails() {
+    const detailsContainer = document.querySelector('#details-tab .details-container');
+
+    if (!this.currentResource) {
+      detailsContainer.innerHTML = '<div class="empty-state"><p>Select a resource to view details</p></div>';
+      return;
+    }
+
+    const { type, name, data } = this.currentResource;
+
+    // Fetch describe output for the resource
+    let describeOutput = '';
+    try {
+      describeOutput = await this.fetchResourceDescribe(type, name);
+    } catch (error) {
+      console.error(`Failed to describe ${type}/${name}:`, error);
+    }
+
+    detailsContainer.innerHTML = '';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'resource-details-header';
+    header.innerHTML = `
+      <div class="resource-type">${type}</div>
+      <div class="resource-name">${name}</div>
+    `;
+    detailsContainer.appendChild(header);
+
+    // Basic info section
+    const basicInfo = document.createElement('div');
+    basicInfo.className = 'details-section';
+    basicInfo.innerHTML = `
+      <h3>Basic Info</h3>
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="detail-label">Name</span>
+          <span class="detail-value">${name}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Namespace</span>
+          <span class="detail-value">${data.metadata?.namespace || 'cluster-scoped'}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Created</span>
+          <span class="detail-value">${data.metadata?.creationTimestamp || '-'}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">UID</span>
+          <span class="detail-value">${data.metadata?.uid || '-'}</span>
+        </div>
+      </div>
+    `;
+    detailsContainer.appendChild(basicInfo);
+
+    // Labels section
+    if (data.metadata?.labels && Object.keys(data.metadata.labels).length > 0) {
+      const labelsSection = document.createElement('div');
+      labelsSection.className = 'details-section';
+      labelsSection.innerHTML = `
+        <h3>Labels</h3>
+        <div class="labels-list">
+          ${Object.entries(data.metadata.labels).map(([k, v]) =>
+            `<span class="label-badge">${this.escapeHtml(k)}=${this.escapeHtml(v)}</span>`
+          ).join('')}
+        </div>
+      `;
+      detailsContainer.appendChild(labelsSection);
+    }
+
+    // Describe output
+    if (describeOutput) {
+      const describeSection = document.createElement('div');
+      describeSection.className = 'details-section';
+      describeSection.innerHTML = `
+        <h3>Describe</h3>
+        <pre class="describe-output">${this.escapeHtml(describeOutput)}</pre>
+      `;
+      detailsContainer.appendChild(describeSection);
+    }
+  }
+
+  async fetchResourceDescribe(type, name) {
+    // Map type to kubectl resource type
+    const typeMap = {
+      'service': 'service',
+      'ingress': 'ingress',
+      'endpoints': 'endpoints',
+      'configmap': 'configmap',
+      'secret': 'secret',
+      'pvc': 'pvc',
+      'pv': 'pv',
+      'node': 'node',
+    };
+
+    const resourceType = typeMap[type] || type;
+
+    // For cluster-scoped resources (nodes, pvs), don't use namespace
+    if (type === 'node' || type === 'pv') {
+      const result = await this.kubectlService.api.exec(['describe', resourceType, name]);
+      if (result.success) {
+        return result.data;
+      }
+      throw new Error(result.error);
+    }
+
+    // For namespace-scoped resources
+    const result = await this.kubectlService.api.exec(['describe', resourceType, name, '-n', this.currentNamespace]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
   }
 }
 
