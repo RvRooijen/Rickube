@@ -9,6 +9,8 @@ import TerminalComponent from './components/terminal.js';
 import LogsComponent from './components/logs.js';
 import MetricsComponent from './components/metrics.js';
 import FileBrowser from './components/fileBrowser.js';
+import WorkloadsComponent from './components/workloads.js';
+import EventsComponent from './components/events.js';
 
 class RickubeApp {
   constructor() {
@@ -24,12 +26,20 @@ class RickubeApp {
     this.logs = new LogsComponent('logs-container');
     this.metrics = new MetricsComponent();
     this.fileBrowser = new FileBrowser('files-container', this.kubectlService);
+    this.workloads = new WorkloadsComponent('workloads-container', this.kubectlService, {
+      onScale: this.onWorkloadScale.bind(this),
+      onRestart: this.onWorkloadRestart.bind(this),
+      onRollback: this.onWorkloadRollback.bind(this),
+      onTriggerJob: this.onTriggerCronJob.bind(this),
+    });
+    this.events = new EventsComponent('events-list', this.kubectlService);
 
     // State
     this.currentNamespace = null;
     this.currentPod = null;
     this.currentPodData = null;
     this.selectedTab = 'details';
+    this.currentMainView = 'pods';
 
     // DOM elements
     this.contextSelect = document.getElementById('context-select');
@@ -47,12 +57,12 @@ class RickubeApp {
   setupPanelResize() {
     const mainContent = document.querySelector('.main-content');
     const sidebar = document.getElementById('sidebar');
-    const podGridContainer = document.getElementById('pod-grid-container');
+    const mainViewContainer = document.getElementById('main-view-container');
     const rightPanel = document.getElementById('right-panel');
     const handle1 = document.getElementById('resize-handle-1');
     const handle2 = document.getElementById('resize-handle-2');
 
-    if (!mainContent || !sidebar || !podGridContainer || !rightPanel || !handle1 || !handle2) {
+    if (!mainContent || !sidebar || !mainViewContainer || !rightPanel || !handle1 || !handle2) {
       return;
     }
 
@@ -136,7 +146,16 @@ class RickubeApp {
       await this.switchContext(contextName);
     });
 
-    // Tab switching
+    // Main view tab switching (Pods/Workloads)
+    const mainViewTabs = document.querySelectorAll('.main-view-tab');
+    mainViewTabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        this.switchMainView(view);
+      });
+    });
+
+    // Right panel tab switching
     const tabButtons = document.querySelectorAll('.tab-btn');
     tabButtons.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -297,12 +316,16 @@ class RickubeApp {
 
     this.namespaceName.textContent = namespaceName;
 
-    // Load pods for this namespace
-    await this.loadPods(namespaceName);
+    // Load pods and events for this namespace
+    await Promise.all([
+      this.loadPods(namespaceName),
+      this.loadEvents(namespaceName)
+    ]);
 
-    // Stop pod polling and start new one
+    // Stop existing polling and start new ones
     this.pollerService.stop('pods');
     this.pollerService.stop('metrics');
+    this.pollerService.stop('events');
 
     this.pollerService.start('pods', async () => {
       await this.loadPods(namespaceName);
@@ -311,6 +334,19 @@ class RickubeApp {
     this.pollerService.start('metrics', async () => {
       await this.loadMetrics(namespaceName);
     }, 5000);
+
+    // Events polling - always active regardless of view
+    this.pollerService.start('events', async () => {
+      await this.loadEvents(namespaceName);
+    }, 10000);
+  }
+
+  async loadEvents(namespace) {
+    try {
+      await this.events.loadEvents(namespace);
+    } catch (error) {
+      console.error('[app] Failed to load events:', error);
+    }
   }
 
   async loadPods(namespace) {
@@ -509,6 +545,188 @@ class RickubeApp {
     setTimeout(() => {
       toast.classList.remove('show');
     }, 3000);
+  }
+
+  // Main view switching (Pods/Workloads)
+  switchMainView(viewName) {
+    this.currentMainView = viewName;
+
+    // Update tab buttons
+    const mainViewTabs = document.querySelectorAll('.main-view-tab');
+    mainViewTabs.forEach(btn => {
+      if (btn.dataset.view === viewName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Update view content
+    const viewContents = document.querySelectorAll('.main-view-content');
+    viewContents.forEach(content => {
+      if (content.id === `${viewName}-view`) {
+        content.classList.add('active');
+      } else {
+        content.classList.remove('active');
+      }
+    });
+
+    // Handle view-specific actions
+    if (viewName === 'workloads' && this.currentNamespace) {
+      this.loadWorkloads(this.currentNamespace);
+      // Start workloads polling
+      this.pollerService.stop('workloads');
+      this.pollerService.start('workloads', async () => {
+        await this.loadWorkloads(this.currentNamespace);
+      }, 5000);
+    } else if (viewName === 'pods') {
+      // Stop workloads polling when switching to pods
+      this.pollerService.stop('workloads');
+    }
+  }
+
+  async loadWorkloads(namespace) {
+    try {
+      await this.workloads.loadAll(namespace);
+    } catch (error) {
+      console.error('[app] Failed to load workloads:', error);
+    }
+  }
+
+  // Workload action handlers
+  async onWorkloadScale(resourceType, name, currentReplicas) {
+    const modal = document.getElementById('scale-modal');
+    const resourceNameEl = document.getElementById('scale-resource-name');
+    const replicasInput = document.getElementById('scale-replicas');
+    const currentEl = document.getElementById('scale-current');
+    const confirmBtn = document.getElementById('scale-confirm');
+    const cancelBtn = document.getElementById('scale-cancel');
+    const closeBtn = document.getElementById('scale-modal-close');
+
+    resourceNameEl.textContent = name;
+    replicasInput.value = currentReplicas;
+    currentEl.textContent = currentReplicas;
+    modal.classList.add('show');
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        modal.classList.remove('show');
+        confirmBtn.onclick = null;
+        cancelBtn.onclick = null;
+        closeBtn.onclick = null;
+      };
+
+      confirmBtn.onclick = async () => {
+        const newReplicas = parseInt(replicasInput.value, 10);
+        cleanup();
+        try {
+          await this.kubectlService.scaleResource(resourceType, name, this.currentNamespace, newReplicas);
+          this.showSuccess(`${name} scaled to ${newReplicas} replicas`);
+          await this.loadWorkloads(this.currentNamespace);
+        } catch (error) {
+          this.showError(`Failed to scale: ${error.message}`);
+        }
+        resolve(true);
+      };
+
+      cancelBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      closeBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+    });
+  }
+
+  async onWorkloadRestart(resourceType, name) {
+    const confirmed = await this.showConfirmModal(
+      'Restart Workload',
+      `Are you sure you want to restart ${name}? This will trigger a rolling restart.`
+    );
+
+    if (confirmed) {
+      try {
+        await this.kubectlService.restartResource(resourceType, name, this.currentNamespace);
+        this.showSuccess(`${name} restart initiated`);
+        await this.loadWorkloads(this.currentNamespace);
+      } catch (error) {
+        this.showError(`Failed to restart: ${error.message}`);
+      }
+    }
+  }
+
+  async onWorkloadRollback(name) {
+    const confirmed = await this.showConfirmModal(
+      'Rollback Deployment',
+      `Are you sure you want to rollback ${name} to the previous revision?`
+    );
+
+    if (confirmed) {
+      try {
+        await this.kubectlService.rollbackDeployment(name, this.currentNamespace);
+        this.showSuccess(`${name} rollback initiated`);
+        await this.loadWorkloads(this.currentNamespace);
+      } catch (error) {
+        this.showError(`Failed to rollback: ${error.message}`);
+      }
+    }
+  }
+
+  async onTriggerCronJob(name) {
+    const confirmed = await this.showConfirmModal(
+      'Trigger CronJob',
+      `Are you sure you want to manually trigger ${name}?`
+    );
+
+    if (confirmed) {
+      try {
+        await this.kubectlService.triggerCronJob(name, this.currentNamespace);
+        this.showSuccess(`${name} triggered successfully`);
+        await this.loadWorkloads(this.currentNamespace);
+      } catch (error) {
+        this.showError(`Failed to trigger job: ${error.message}`);
+      }
+    }
+  }
+
+  showConfirmModal(title, message) {
+    const modal = document.getElementById('confirm-modal');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const confirmBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    const closeBtn = document.getElementById('confirm-modal-close');
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    modal.classList.add('show');
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        modal.classList.remove('show');
+        confirmBtn.onclick = null;
+        cancelBtn.onclick = null;
+        closeBtn.onclick = null;
+      };
+
+      confirmBtn.onclick = () => {
+        cleanup();
+        resolve(true);
+      };
+
+      cancelBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      closeBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+    });
   }
 }
 

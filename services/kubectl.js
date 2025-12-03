@@ -189,6 +189,154 @@ class KubectlService {
     }
     throw new Error(result.error);
   }
+
+  // ============================================
+  // Workloads: Deployments
+  // ============================================
+
+  async getDeployments(namespace) {
+    const result = await this.api.exec(['get', 'deployments', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async scaleResource(resourceType, name, namespace, replicas) {
+    const result = await this.api.exec(['scale', `${resourceType}/${name}`, '-n', namespace, `--replicas=${replicas}`]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  async restartResource(resourceType, name, namespace) {
+    const result = await this.api.exec(['rollout', 'restart', `${resourceType}/${name}`, '-n', namespace]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  async rollbackDeployment(name, namespace, revision = null) {
+    const args = ['rollout', 'undo', `deployment/${name}`, '-n', namespace];
+    if (revision) {
+      args.push(`--to-revision=${revision}`);
+    }
+    const result = await this.api.exec(args);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  async getRolloutHistory(name, namespace) {
+    const result = await this.api.exec(['rollout', 'history', `deployment/${name}`, '-n', namespace]);
+    if (result.success) {
+      return this.parseRolloutHistory(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  parseRolloutHistory(output) {
+    if (!output || !output.trim()) return [];
+
+    const lines = output.trim().split('\n');
+    const revisions = [];
+
+    // Skip header lines
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const parts = line.split(/\s+/);
+      if (parts.length >= 1) {
+        revisions.push({
+          revision: parts[0],
+          change: parts.slice(1).join(' ') || '<none>'
+        });
+      }
+    }
+
+    return revisions;
+  }
+
+  // ============================================
+  // Workloads: StatefulSets
+  // ============================================
+
+  async getStatefulSets(namespace) {
+    const result = await this.api.exec(['get', 'statefulsets', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Workloads: DaemonSets
+  // ============================================
+
+  async getDaemonSets(namespace) {
+    const result = await this.api.exec(['get', 'daemonsets', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Workloads: Jobs
+  // ============================================
+
+  async getJobs(namespace) {
+    const result = await this.api.exec(['get', 'jobs', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async deleteJob(name, namespace) {
+    const result = await this.api.exec(['delete', 'job', name, '-n', namespace]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Workloads: CronJobs
+  // ============================================
+
+  async getCronJobs(namespace) {
+    const result = await this.api.exec(['get', 'cronjobs', '-n', namespace, '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
+
+  async triggerCronJob(name, namespace) {
+    const jobName = `${name}-manual-${Date.now()}`;
+    const result = await this.api.exec(['create', 'job', jobName, `--from=cronjob/${name}`, '-n', namespace]);
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error(result.error);
+  }
+
+  // ============================================
+  // Events
+  // ============================================
+
+  async getEvents(namespace) {
+    const result = await this.api.exec(['get', 'events', '-n', namespace, '--sort-by=.lastTimestamp', '-o', 'json']);
+    if (result.success) {
+      return JSON.parse(result.data);
+    }
+    throw new Error(result.error);
+  }
 }
 
 export default KubectlService;

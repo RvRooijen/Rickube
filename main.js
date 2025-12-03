@@ -6,6 +6,14 @@ const { autoUpdater } = require('electron-updater');
 
 const execAsync = promisify(exec);
 
+// Hot reload in development
+try {
+  require('electron-reloader')(module, {
+    debug: false,
+    watchRenderer: true
+  });
+} catch (_) { /* ignore in production */ }
+
 // Configure auto-updater
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;

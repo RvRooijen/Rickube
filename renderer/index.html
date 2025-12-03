@@ -59,18 +59,64 @@
     <!-- Resize Handle 1 -->
     <div class="panel-resize-handle" id="resize-handle-1"></div>
 
-    <!-- Center: Pod Grid -->
-    <section class="pod-grid-container" id="pod-grid-container">
-      <div class="pod-grid-header">
-        <h2>Pods</h2>
-        <div class="pod-grid-info">
-          <span id="namespace-name">Select a namespace</span>
-          <span class="pod-count" id="pod-count"></span>
+    <!-- Center: Main Content Area -->
+    <section class="main-view-container" id="main-view-container">
+      <!-- Upper section: Pods/Workloads -->
+      <div class="main-view-upper">
+        <!-- Main View Tabs -->
+        <div class="main-view-tabs">
+          <button class="main-view-tab active" data-view="pods">Pods</button>
+          <button class="main-view-tab" data-view="workloads">Workloads</button>
+          <div class="main-view-info">
+            <span id="namespace-name">Select a namespace</span>
+            <span class="pod-count" id="pod-count"></span>
+          </div>
+        </div>
+
+        <!-- Pods View -->
+        <div class="main-view-content active" id="pods-view">
+          <div class="pod-grid" id="pod-grid">
+            <div class="empty-state">
+              <p>Select a namespace to view pods</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workloads View -->
+        <div class="main-view-content" id="workloads-view">
+          <div class="workloads-container" id="workloads-container">
+            <div class="empty-state">
+              <p>Select a namespace to view workloads</p>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="pod-grid" id="pod-grid">
-        <div class="empty-state">
-          <p>Select a namespace to view pods</p>
+
+      <!-- Horizontal Resize Handle -->
+      <div class="horizontal-resize-handle" id="events-resize-handle"></div>
+
+      <!-- Lower section: Events Panel -->
+      <div class="events-panel" id="events-panel">
+        <div class="events-panel-header">
+          <div class="events-panel-title">
+            <span class="events-icon">⚡</span>
+            <span>Events</span>
+            <span class="events-count" id="events-count"></span>
+            <span class="events-warning-count" id="events-warning-count"></span>
+          </div>
+          <div class="events-panel-controls">
+            <button class="events-control-btn" id="events-filter-all" title="All events">All</button>
+            <button class="events-control-btn" id="events-filter-warnings" title="Warnings only">Warnings</button>
+            <button class="events-control-btn" id="events-clear" title="Clear">Clear</button>
+            <button class="events-control-btn" id="events-toggle" title="Toggle panel">▼</button>
+          </div>
+        </div>
+        <div class="events-panel-content" id="events-panel-content">
+          <div class="events-list" id="events-list">
+            <div class="empty-state">
+              <p>Select a namespace to view events</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -144,6 +190,44 @@
   <div class="toast" id="error-toast">
     <span class="toast-message"></span>
     <button class="toast-close">×</button>
+  </div>
+
+  <!-- Scale Modal -->
+  <div class="modal-overlay" id="scale-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Scale <span id="scale-resource-name"></span></h3>
+        <button class="modal-close" id="scale-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="scale-replicas">Replicas:</label>
+          <input type="number" id="scale-replicas" min="0" max="100" value="1">
+        </div>
+        <p class="modal-info">Current: <span id="scale-current"></span> replicas</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="scale-cancel">Cancel</button>
+        <button class="btn" id="scale-confirm">Scale</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="confirm-title">Confirm Action</h3>
+        <button class="modal-close" id="confirm-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+        <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->
